@@ -1,0 +1,2887 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inventario BASF-HCL</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#ffffff;--surface:#ffffff;--border:rgba(0,0,0,0.09);
+  --text:#111827;--text2:#4b5563;--text3:#9ca3af;
+  --nav-bg:#1a56db;--nav-text:#ffffff;--nav-text2:rgba(255,255,255,0.7);--nav-active:#ffffff;
+  --teal-bg:#e1f5ee;--teal-t:#0f6e56;--teal-b:#1d9e75;
+  --amber-bg:#faeeda;--amber-t:#854f0b;--amber-b:#ba7517;
+  --coral-bg:#faece7;--coral-t:#993c1d;--coral-b:#d85a30;
+  --purple-bg:#eeedfe;--purple-t:#3c3489;--purple-b:#7f77dd;
+  --blue-bg:#e6f1fb;--blue-t:#0c447c;--blue-b:#378add;
+  --gray-bg:#f1efe8;--gray-t:#444441;--gray-b:#888780;
+  --red-bg:#fcebeb;--red-t:#a32d2d;--red-b:#e24b4a;
+  --green-bg:#eaf3de;--green-t:#27500a;--green-b:#639922;
+  --card-prog-bg:#1a3a1a;--card-prog-text:#e8f5e8;--card-prog-sub:rgba(232,245,232,0.7);--card-prog-border:#2d6a2d;
+  --card-done-bg:#0a1628;--card-done-text:#e8eef8;--card-done-sub:rgba(232,238,248,0.7);--card-done-border:#1a3a6e;
+  --r:10px;
+}
+[data-theme="dark"]{
+  --bg:#0f0f0f;--surface:#1a1a1a;--border:rgba(255,255,255,0.09);
+  --text:#f5f5f5;--text2:#a0a0a0;--text3:#555555;
+  --nav-bg:#1a56db;--nav-text:#ffffff;--nav-text2:rgba(255,255,255,0.65);--nav-active:#ffffff;
+  --teal-bg:#04342c;--teal-t:#9fe1cb;--amber-bg:#412402;--amber-t:#fac775;
+  --coral-bg:#4a1b0c;--coral-t:#f5c4b3;--purple-bg:#26215c;--purple-t:#cecbf6;
+  --blue-bg:#042c53;--blue-t:#b5d4f4;--gray-bg:#1c2128;--gray-t:#d3d1c7;
+  --red-bg:#501313;--red-t:#f7c1c1;--green-bg:#173404;--green-t:#c0dd97;
+  --card-prog-bg:#0d2c0d;--card-prog-text:#c8f0c8;--card-prog-sub:rgba(200,240,200,0.6);--card-prog-border:#1a5c1a;
+  --card-done-bg:#060e1f;--card-done-text:#c8d8f0;--card-done-sub:rgba(200,216,240,0.6);--card-done-border:#0f2a5c;
+}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* LOGIN */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:36px;width:100%;max-width:380px}
+.login-logo{font-size:22px;font-weight:600;margin-bottom:6px}
+.login-logo span{color:var(--teal-b)}
+.login-sub{font-size:13px;color:var(--text2);margin-bottom:28px}
+.login-err{background:var(--red-bg);color:var(--red-t);border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:14px;display:none}
+
+/* NAV */
+nav{background:var(--nav-bg);border-bottom:none;display:flex;align-items:center;padding:0 24px;height:56px;position:sticky;top:0;z-index:50;gap:4px;box-shadow:0 2px 8px rgba(26,86,219,0.3)}
+.nav-brand{font-size:16px;font-weight:700;margin-right:24px;white-space:nowrap;color:var(--nav-text);letter-spacing:-0.3px}
+.nav-brand span{color:rgba(255,255,255,0.85);font-weight:400}
+.nav-tab{padding:0 14px;height:100%;display:flex;align-items:center;font-size:13px;font-weight:500;color:var(--nav-text2);cursor:pointer;border-bottom:3px solid transparent;transition:color .15s,border-color .15s,background .15s;white-space:nowrap;user-select:none;border-radius:0}
+.nav-tab:hover{color:var(--nav-text);background:rgba(255,255,255,0.08)}
+.nav-tab.active{color:var(--nav-active);border-bottom-color:rgba(255,255,255,0.9)}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.user-chip{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)}
+.user-avatar{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
+.rol-badge{font-size:10px;font-weight:500;padding:2px 7px;border-radius:10px}
+.rol-admin{background:var(--purple-bg);color:var(--purple-t)}
+.rol-editor{background:var(--teal-bg);color:var(--teal-t)}
+.rol-viewer{background:var(--gray-bg);color:var(--gray-t)}
+
+/* SHARED */
+main{padding:20px 24px;max-width:1280px;margin:0 auto}
+.page{display:none}.page.active{display:block}
+.btn{padding:8px 14px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:opacity .15s}
+.btn:hover{opacity:.85}.btn:disabled{opacity:.4;cursor:default}
+.btn-primary{background:var(--teal-b);color:#fff}
+.btn-outline{background:var(--surface);color:var(--text);border:1px solid var(--border)}
+.btn-sm{padding:5px 11px;font-size:12px;border-radius:7px}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;white-space:nowrap}
+.t-breeze{background:var(--purple-bg);color:var(--purple-t);border:1px solid var(--purple-b)}
+.t-install{background:var(--teal-bg);color:var(--teal-t);border:1px solid var(--teal-b)}
+.t-return{background:var(--blue-bg);color:var(--blue-t);border:1px solid var(--blue-b)}
+.t-bnf{background:var(--coral-bg);color:var(--coral-t);border:1px solid var(--coral-b)}
+.t-ccd{background:var(--amber-bg);color:var(--amber-t);border:1px solid var(--amber-b)}
+.s-prog{background:var(--green-bg);color:var(--green-t);border:1px solid var(--green-b)}
+.s-done{background:var(--blue-bg);color:var(--blue-t);border:1px solid var(--blue-b)}
+.b-nb{background:var(--teal-bg);color:var(--teal-t);border:1px solid var(--teal-b)}
+.b-mpc{background:var(--purple-bg);color:var(--purple-t);border:1px solid var(--purple-b)}
+.b-cnb{background:var(--gray-bg);color:var(--gray-t);border:1px solid var(--gray-b)}
+.b-cmpc{background:var(--blue-bg);color:var(--blue-t);border:1px solid var(--blue-b)}
+.e-op{background:var(--teal-bg);color:var(--teal-t);border:1px solid var(--teal-b)}
+.e-asignado{background:var(--amber-bg);color:var(--amber-t);border:1px solid var(--amber-b);cursor:pointer}
+.e-asignado:hover{opacity:.8}
+.e-rep{background:var(--amber-bg);color:var(--amber-t);border:1px solid var(--amber-b)}
+.e-dis{background:var(--coral-bg);color:var(--coral-t);border:1px solid var(--coral-b)}
+.e-nop{background:var(--red-bg);color:var(--red-t);border:1px solid var(--red-b)}
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:18px}
+.sc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;cursor:pointer;transition:all .15s;box-shadow:0 1px 3px rgba(26,86,219,0.06)}
+.sc:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 3px 10px rgba(26,86,219,0.12)}
+.sc .lbl{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;font-weight:600}
+.sc .val{font-size:24px;font-weight:700;color:var(--text)}.sc .sub{font-size:10px;color:var(--text3);margin-top:1px}
+.controls{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.sw{position:relative;flex:1;min-width:180px}
+.sw input{width:100%;padding:8px 12px 8px 34px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;outline:none}
+.sw input:focus{border-color:var(--teal-b)}
+.sw span{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none}
+select{padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;outline:none;cursor:pointer}
+select:focus{border-color:var(--teal-b)}
+.ri{font-size:11px;color:var(--text3);margin-bottom:10px}
+.empty{text-align:center;padding:60px;color:var(--text3)}
+.pg{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:18px;font-size:13px;color:var(--text2)}
+.pb{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:5px 13px;cursor:pointer;font-size:13px;color:var(--text)}
+.pb:hover{background:var(--bg)}.pb:disabled{opacity:.35;cursor:default}
+.mono{font-family:monospace;font-size:11px;color:var(--text2)}
+.xbtn{background:none;border:1px solid var(--border);border-radius:7px;padding:4px 10px;cursor:pointer;font-size:13px;color:var(--text2)}
+.xbtn:hover{background:var(--bg)}
+
+/* TABLE */
+.tw{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{padding:9px 13px;text-align:left;font-weight:600;font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--border);background:var(--bg);white-space:nowrap;cursor:pointer;user-select:none}
+thead th:not([onclick]){cursor:default}
+thead th:hover{color:var(--text)}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--bg)}
+td{padding:9px 13px;vertical-align:middle}
+.nota-chip{font-size:11px;color:var(--amber-t);background:var(--amber-bg);border-radius:4px;padding:2px 6px;max-width:180px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ab{display:flex;gap:6px}
+.ib{background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:12px;color:var(--text2);transition:all .15s}
+.ib:hover{background:var(--bg)}.ib.del:hover{color:var(--red-t);border-color:var(--red-b)}
+.stpg{display:flex;align-items:center;gap:8px;padding:10px 13px;border-top:1px solid var(--border);font-size:12px;color:var(--text2)}
+
+/* CARDS */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.card{border-radius:12px;overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s;border:1.5px solid #e5e7eb}
+.card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.08)}
+.card.prog{background:#f0faf5;border-color:#1d9e75}
+.card.done{background:#fff;border-color:#e5e7eb}
+.card-header{padding:8px 14px;display:flex;align-items:center;justify-content:space-between}
+.card.prog .card-header{background:#1d9e75}
+.card.done .card-header{background:#f9fafb;border-bottom:1px solid #e5e7eb}
+.card-header-label{font-size:12px;font-weight:600}
+.card.prog .card-header-label{color:#fff}
+.card.done .card-header-label{color:#6b7280}
+.card-header-icon{font-size:13px;font-weight:700}
+.card.prog .card-header-icon{color:#fff}
+.card.done .card-header-icon{color:#1d9e75}
+.dot-pulse{width:8px;height:8px;border-radius:50%;background:#fff;animation:dpulse 1.5s infinite;flex-shrink:0}
+@keyframes dpulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+.card-top{padding:12px 14px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.card-ritm{font-size:15px;font-weight:700;margin-bottom:5px}
+.card.prog .card-ritm{color:#085041}
+.card.done .card-ritm{color:#111827}
+.card-meta{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.card-resp{font-size:12px;margin-top:3px}
+.card.prog .card-resp{color:#0f6e56}
+.card.done .card-resp{color:#6b7280}
+.card-fecha{font-size:12px;white-space:nowrap}
+.card.prog .card-fecha{color:#0f6e56}
+.card.done .card-fecha{color:#9ca3af}
+.card-serial-row{padding:0 14px 10px;display:flex;gap:6px;flex-wrap:wrap}
+.card-serial-chip{font-family:monospace;font-size:11px;padding:2px 8px;border-radius:5px;display:inline-flex;align-items:center;gap:4px}
+.card.prog .card-serial-chip{background:#c8eedd;color:#085041}
+.card.done .card-serial-chip{background:#f3f4f6;color:#374151}
+.card-detail{display:none;border-top:1px solid var(--border);padding:14px 16px;background:var(--bg)}
+.card.open .card-detail{display:block}
+.det-section{margin-bottom:12px}
+.det-title{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:8px}
+.det-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.det-field{background:var(--surface);border-radius:7px;padding:7px 9px}
+.det-field .k{font-size:10px;color:var(--text3);margin-bottom:1px;text-transform:uppercase;letter-spacing:.04em}
+.det-field .v{font-size:12px;word-break:break-word}
+.det-field.full{grid-column:1/-1}
+.sc-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:5px;font-size:10px;margin-top:3px}
+.sc-ok{background:var(--teal-bg);color:var(--teal-t)}.sc-miss{background:var(--amber-bg);color:var(--amber-t)}
+.caja-chip{background:var(--blue-bg);color:var(--blue-t);padding:2px 7px;border-radius:5px;font-size:10px;display:inline-block}
+.card-actions{display:flex;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);flex-wrap:wrap}
+.tipo-desc-card{font-size:11px;color:var(--text3);background:var(--surface);border-radius:7px;padding:7px 9px;margin-bottom:10px;border-left:3px solid var(--teal-b)}
+.coment-card{background:var(--amber-bg);color:var(--amber-t);border-radius:7px;padding:7px 9px;font-size:12px;margin-top:8px}
+
+/* HISTORIAL */
+.hist-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 14px;display:flex;gap:12px;align-items:flex-start}
+.hist-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
+.hist-body{flex:1;min-width:0}
+.hist-accion{font-size:13px;font-weight:500;margin-bottom:2px}
+.hist-meta{font-size:11px;color:var(--text3)}
+.hist-detalle{font-size:11px;color:var(--text2);margin-top:4px;font-family:monospace;background:var(--bg);padding:4px 7px;border-radius:5px}
+.hist-badge{display:inline-block;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:500;margin-right:4px}
+.hb-stock{background:var(--teal-bg);color:var(--teal-t)}
+.hb-ticket{background:var(--purple-bg);color:var(--purple-t)}
+.hb-usuario{background:var(--amber-bg);color:var(--amber-t)}
+
+/* USUARIOS PAGE */
+.user-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px}
+.user-info{flex:1;min-width:0}
+.user-name{font-size:14px;font-weight:500}
+.user-email{font-size:12px;color:var(--text2)}
+.user-list{display:flex;flex-direction:column;gap:8px}
+.inactive-chip{background:var(--gray-bg);color:var(--gray-t);font-size:11px;padding:2px 7px;border-radius:10px}
+
+/* SYNC TOAST */
+.sync-log{position:fixed;bottom:20px;right:20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-size:12px;max-width:320px;z-index:200;box-shadow:0 4px 20px rgba(0,0,0,.12);display:none}
+.sync-log.show{display:block;animation:fadeIn .2s}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.sync-log .sl-title{font-weight:500;margin-bottom:6px;color:var(--teal-t)}
+.sync-log .sl-item{color:var(--text2);margin-bottom:2px}
+
+/* LOADING */
+
+/* RETURNS */
+.ret-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.ret-header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.ret-modelo{font-size:14px;font-weight:500}
+.ret-serial{font-family:monospace;font-size:12px;color:var(--text2);margin-top:2px}
+.ret-badges{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
+.ret-meta{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.ret-field{background:var(--bg);border-radius:7px;padding:6px 9px}
+.ret-field .k{font-size:10px;color:var(--text3);margin-bottom:1px;text-transform:uppercase;letter-spacing:.04em}
+.ret-field .v{font-size:12px;color:var(--text)}
+.ret-field.full{grid-column:1/-1}
+.ret-notas{background:var(--amber-bg);color:var(--amber-t);border-radius:7px;padding:7px 9px;font-size:12px}
+.ret-actions{display:flex;gap:8px;padding-top:8px;border-top:1px solid var(--border)}
+.c-repair{background:var(--amber-bg);color:var(--amber-t);border:1px solid var(--amber-b)}
+.c-return{background:var(--blue-bg);color:var(--blue-t);border:1px solid var(--blue-b)}
+.c-ingreso{background:var(--teal-bg);color:var(--teal-t);border:1px solid var(--teal-b)}
+.c-device{background:var(--purple-bg);color:var(--purple-t);border:1px solid var(--purple-b)}
+.c-other{background:var(--gray-bg);color:var(--gray-t);border:1px solid var(--gray-b)}
+
+
+.td-section{margin-bottom:16px}
+.td-section-title{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.td-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.td-field{background:var(--bg);border-radius:8px;padding:8px 10px}
+.td-field .k{font-size:10px;color:var(--text3);margin-bottom:2px;text-transform:uppercase;letter-spacing:.04em}
+.td-field .v{font-size:13px;word-break:break-word}
+.td-field.full{grid-column:1/-1}
+.td-stock-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:6px;font-size:11px;margin-top:4px;cursor:pointer;transition:opacity .15s}
+.td-stock-chip:hover{opacity:.8}
+.td-stock-ok{background:var(--teal-bg);color:var(--teal-t);border:1px solid var(--teal-b)}
+.td-stock-miss{background:var(--amber-bg);color:var(--amber-t);border:1px solid var(--amber-b)}
+.td-coment{background:var(--amber-bg);color:var(--amber-t);border-radius:8px;padding:9px 12px;font-size:13px;margin-top:4px}
+
+
+/* DASHBOARD */
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px}
+.dash-kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;position:relative;overflow:hidden}
+.dash-kpi-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);margin-bottom:6px}
+.dash-kpi-val{font-size:32px;font-weight:700;color:var(--text);line-height:1}
+.dash-kpi-sub{font-size:12px;color:var(--text3);margin-top:4px}
+.dash-kpi-bar{position:absolute;bottom:0;left:0;height:3px;background:var(--teal-b);border-radius:0 3px 3px 0}
+.dash-charts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.dash-charts-full{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:20px}
+@media(max-width:700px){.dash-charts{grid-template-columns:1fr}}
+.dash-chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px}
+.dash-chart-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:14px}
+.dash-chart-wrap{position:relative;height:220px}
+.dash-destinos{display:flex;flex-direction:column;gap:10px;max-height:220px;overflow-y:auto;padding-right:4px}
+.dash-destino-row{display:flex;align-items:center;gap:10px}
+.dash-destino-label{font-size:13px;color:var(--text);min-width:100px;max-width:140px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.dash-destino-bar-wrap{flex:1;background:var(--border);border-radius:6px;height:10px;overflow:hidden}
+.dash-destino-bar{height:100%;background:var(--teal-b);border-radius:6px;transition:width .6s ease}
+.dash-destino-count{font-size:13px;font-weight:600;color:var(--text);min-width:28px;text-align:right}
+
+
+/* ALERTAS */
+.alerta-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+.alerta-kpi{border-radius:var(--r);padding:14px 16px;text-align:center}
+.alerta-kpi.critica{background:var(--red-bg);border:1px solid var(--red-b)}
+.alerta-kpi.advertencia{background:var(--amber-bg);border:1px solid var(--amber-b)}
+.alerta-kpi.informativa{background:var(--blue-bg);border:1px solid var(--blue-b)}
+.alerta-kpi .av{font-size:28px;font-weight:700}
+.alerta-kpi.critica .av{color:var(--red-t)}
+.alerta-kpi.advertencia .av{color:var(--amber-t)}
+.alerta-kpi.informativa .av{color:var(--blue-t)}
+.alerta-kpi .al{font-size:11px;margin-top:2px}
+.alerta-kpi.critica .al{color:var(--red-t)}
+.alerta-kpi.advertencia .al{color:var(--amber-t)}
+.alerta-kpi.informativa .al{color:var(--blue-t)}
+.alerta-section{margin-bottom:16px}
+.alerta-section-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px}
+.alerta-section-title.critica{color:var(--red-t)}
+.alerta-section-title.advertencia{color:var(--amber-t)}
+.alerta-section-title.informativa{color:var(--blue-t)}
+.alerta-item{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:12px 14px;display:flex;gap:12px;align-items:center;margin-bottom:7px;cursor:pointer;transition:opacity .15s}
+.alerta-item:hover{opacity:.85}
+.alerta-item.critica{border-left:3px solid var(--red-b)}
+.alerta-item.advertencia{border-left:3px solid var(--amber-b)}
+.alerta-item.informativa{border-left:3px solid var(--blue-b)}
+.alerta-item-icon{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.alerta-item.critica .alerta-item-icon{background:var(--red-bg)}
+.alerta-item.advertencia .alerta-item-icon{background:var(--amber-bg)}
+.alerta-item.informativa .alerta-item-icon{background:var(--blue-bg)}
+.alerta-item-body{flex:1;min-width:0}
+.alerta-item-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:2px}
+.alerta-item-desc{font-size:11px;color:var(--text2)}
+.alerta-item-badge{font-size:11px;font-weight:600;padding:3px 9px;border-radius:10px;white-space:nowrap;flex-shrink:0}
+.alerta-item.critica .alerta-item-badge{background:var(--red-bg);color:var(--red-t)}
+.alerta-item.advertencia .alerta-item-badge{background:var(--amber-bg);color:var(--amber-t)}
+.alerta-item.informativa .alerta-item-badge{background:var(--blue-bg);color:var(--blue-t)}
+.alerta-empty{text-align:center;padding:40px;color:var(--text3);font-size:13px}
+.nav-alertas-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#e24b4a;margin-left:5px;vertical-align:middle}
+
+
+.bell-alerta{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border-radius:8px;cursor:pointer;transition:background .1s;border-bottom:0.5px solid var(--border)}
+.bell-alerta:last-child{border-bottom:none}
+.bell-alerta:hover{background:var(--bg)}
+.bell-alerta-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.bell-alerta.critica .bell-alerta-icon{background:var(--red-bg)}
+.bell-alerta.advertencia .bell-alerta-icon{background:var(--amber-bg)}
+.bell-alerta.informativa .bell-alerta-icon{background:var(--blue-bg)}
+.bell-alerta-body{flex:1;min-width:0}
+.bell-alerta-title{font-size:12px;font-weight:500;color:var(--text);margin-bottom:1px}
+.bell-alerta.critica .bell-alerta-title{color:var(--red-t)}
+.bell-alerta.advertencia .bell-alerta-title{color:var(--amber-t)}
+.bell-alerta-desc{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bell-dismiss{background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:0 2px;flex-shrink:0}
+.bell-dismiss:hover{color:var(--red-t)}
+.bell-empty{text-align:center;padding:24px;color:var(--text3);font-size:13px}
+
+
+/* NAV DROPDOWNS */
+.nav-dropdown{position:relative;height:100%;display:flex;align-items:stretch}
+.nav-has-dropdown{cursor:pointer}
+.nav-submenu{display:none;position:absolute;top:52px;left:0;background:var(--surface);border:1px solid var(--border);border-radius:0 0 10px 10px;min-width:160px;z-index:100;box-shadow:0 8px 20px rgba(0,0,0,.12);overflow:hidden}
+.nav-submenu.open{display:block}
+.nav-submenu-item{padding:10px 16px;font-size:13px;color:var(--text);cursor:pointer;transition:background .1s;white-space:nowrap}
+.nav-submenu-item:hover{background:var(--bg)}
+
+
+/* GLOBAL SEARCH */
+#gsearch-modal.open{display:flex!important}
+.gs-section{padding:6px 8px 2px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)}
+.gs-item{display:flex;gap:10px;align-items:center;padding:9px 12px;border-radius:8px;cursor:pointer;transition:background .1s}
+.gs-item:hover{background:var(--bg)}
+.gs-item-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.gs-item-body{flex:1;min-width:0}
+.gs-item-title{font-size:13px;font-weight:500;color:var(--text)}
+.gs-item-sub{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gs-item-badge{font-size:10px;font-weight:500;padding:2px 7px;border-radius:10px;flex-shrink:0}
+.gs-empty{text-align:center;padding:32px;color:var(--text3);font-size:13px}
+.gs-hint{text-align:center;padding:24px;color:var(--text3);font-size:12px;line-height:1.6}
+
+
+/* VISTA 360 */
+.v360-section{margin-bottom:20px}
+.v360-section-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.v360-section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.v360-kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:16px}
+.v360-kpi{background:var(--bg);border-radius:8px;padding:10px 12px;text-align:center}
+.v360-kpi .k{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.v360-kpi .v{font-size:18px;font-weight:700;color:var(--text)}
+.v360-timeline{display:flex;flex-direction:column;gap:0}
+.v360-event{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border)}
+.v360-event:last-child{border-bottom:none}
+.v360-event-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.v360-event-body{flex:1;min-width:0}
+.v360-event-title{font-size:13px;font-weight:500;color:var(--text)}
+.v360-event-sub{font-size:11px;color:var(--text2);margin-top:2px}
+.v360-event-date{font-size:11px;color:var(--text3);white-space:nowrap;flex-shrink:0}
+.v360-serial-link{font-family:monospace;font-size:12px;color:var(--teal-b);cursor:pointer;text-decoration:underline}
+.v360-serial-link:hover{opacity:.8}
+.v360-no-data{color:var(--text3);font-size:12px;font-style:italic;padding:4px 0}
+
+.loading-overlay{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:300;font-size:14px;color:var(--text2)}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--teal-b);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* FORMS */
+.mb{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:center;justify-content:center}
+.mb.open{display:flex}
+.mo{background:var(--surface);border-radius:14px;width:100%;max-width:680px;margin:16px;border:1px solid var(--border);max-height:92vh;overflow-y:auto}
+.moh{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--surface);z-index:1}
+.moh h2{font-size:15px;font-weight:500}
+.mob{padding:16px 20px}.mos{margin-bottom:16px}
+.most{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;color:var(--text2)}
+.fg{margin-bottom:10px}
+.fg label{display:block;font-size:11px;color:var(--text2);margin-bottom:3px;font-weight:500}
+.fg input,.fg select,.fg textarea{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:13px;outline:none;font-family:inherit}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--teal-b)}
+.fg textarea{resize:vertical;min-height:50px}
+.fg-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fg-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.mof{padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:0;background:var(--surface)}
+.hint{font-size:11px;margin-top:4px;padding:4px 8px;border-radius:6px}
+.h-ok{background:var(--teal-bg);color:var(--teal-t)}.h-miss{background:var(--amber-bg);color:var(--amber-t)}
+.return-note{background:var(--blue-bg);color:var(--blue-t);border:1px solid var(--blue-b);border-radius:8px;padding:8px 12px;font-size:12px;margin-bottom:10px}
+.tipo-desc{font-size:11px;color:var(--text3);margin-top:4px;padding:6px 10px;background:var(--bg);border-radius:6px;border-left:3px solid var(--teal-b)}
+
+[data-theme="dark"] .card.prog{background:#0d2c0d;border-color:#1a5c1a}
+.card-header{background:#1a5c1a}[data-theme="dark"] .card.prog .card-ritm{color:#c8f0c8}[data-theme="dark"] .card.prog .card-resp,[data-theme="dark"] .card.prog .card-fecha{color:#9fe1cb}[data-theme="dark"] .card.prog .card-serial-chip{background:#0d4020;color:#9fe1cb}[data-theme="dark"] .card.done{background:#161b22;border-color:#30363d}[data-theme="dark"] .card.done .card-header{background:#0d1117;border-bottom-color:#30363d}[data-theme="dark"] .card.done .card-header-label{color:#8b949e}[data-theme="dark"] .card.done .card-ritm{color:#e6edf3}[data-theme="dark"] .card.done .card-resp,[data-theme="dark"] .card.done .card-fecha{color:#8b949e}[data-theme="dark"] .card.done .card-serial-chip{background:#21262d;color:#8b949e}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="spinner"></div>
+  <div id="loading-msg">Iniciando...</div>
+</div>
+
+<!-- LOGIN -->
+<div id="login-page" style="display:none">
+  <div class="login-wrap">
+    <div class="login-box">
+      <div class="login-logo">Inventario <span>BASF</span></div>
+      <div class="login-sub">Ingresá con tu cuenta</div>
+      <div class="login-err" id="login-err"></div>
+      <div class="fg"><label>Email</label><input type="email" id="li-email" placeholder="tu@email.com" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div class="fg"><label>Contraseña</label><input type="password" id="li-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="doLogin()">Ingresar</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none">
+  <nav>
+    <div class="nav-brand">Inventario <span>BASF</span></div>
+    <div class="nav-tab" onclick="showPage('dashboard',this)" id="tab-dashboard">Dashboard</div>
+    <div class="nav-dropdown" id="tab-tickets-group">
+      <div class="nav-tab nav-has-dropdown active" onclick="toggleSubmenu('sub-tickets')" id="tab-tickets">Tickets ▾</div>
+      <div class="nav-submenu" id="sub-tickets">
+        <div class="nav-submenu-item" onclick="showPage('tickets',document.getElementById('tab-tickets-group'));closeSubmenus()">Tickets</div>
+        <div class="nav-submenu-item" onclick="showPage('returns',document.getElementById('tab-tickets-group'));closeSubmenus()">Returns</div>
+        <div class="nav-submenu-item" onclick="showPage('guias',document.getElementById('tab-tickets-group'));closeSubmenus()">Guías courier</div>
+      </div>
+    </div>
+    <div class="nav-tab" onclick="showPage('stock',this)" id="tab-stock">Stock</div>
+    <div class="nav-dropdown" id="tab-gestion-group">
+      <div class="nav-tab nav-has-dropdown" onclick="toggleSubmenu('sub-gestion')" id="tab-gestion">Gestión ▾</div>
+      <div class="nav-submenu" id="sub-gestion">
+        <div class="nav-submenu-item" onclick="showPage('historial',document.getElementById('tab-gestion-group'));closeSubmenus()">Historial</div>
+        <div class="nav-submenu-item" id="nav-usuarios" onclick="showPage('usuarios',document.getElementById('tab-gestion-group'));closeSubmenus()">Usuarios</div>
+      </div>
+    </div>
+    <div class="nav-right">
+      <div class="user-chip" style="color:rgba(255,255,255,0.85)">
+        <div class="user-avatar" id="nav-avatar" style="background:var(--teal-bg);color:var(--teal-t)"></div>
+        <span id="nav-nombre" style="color:rgba(255,255,255,0.9);font-size:12px"></span>
+        <span class="rol-badge" id="nav-rol"></span>
+      </div>
+      <div style="position:relative">
+      <button onclick="toggleGlobalSearch()" id="search-btn" title="Búsqueda global"
+      style="padding:5px 10px;border-radius:7px;font-size:14px;cursor:pointer;border:1px solid rgba(255,255,255,0.4);background:rgba(255,255,255,0.12);color:#fff;transition:background .15s">🔍</button>
+    <button onclick="toggleBell()" id="bell-btn"  title="Alertas"
+        style="position:relative;padding:5px 10px;border-radius:7px;font-size:16px;cursor:pointer;border:1px solid rgba(255,255,255,0.4);background:rgba(255,255,255,0.12);color:#fff;transition:background .15s">
+        🔔<span id="bell-dot" style="display:none;position:absolute;top:3px;right:3px;width:8px;height:8px;background:#e24b4a;border-radius:50%;border:2px solid var(--nav-bg)"></span>
+      </button>
+      <div id="bell-dropdown" style="display:none;position:absolute;right:0;top:44px;width:360px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:200;max-height:480px;overflow-y:auto">
+        <div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:13px;font-weight:600;color:var(--text)">Alertas</span>
+          <div style="display:flex;gap:6px">
+            <button onclick="clearAllAlertas()" class="btn btn-outline btn-sm">Cerrar todas</button>
+            <button onclick="toggleBell()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px">✕</button>
+          </div>
+        </div>
+        <div id="bell-content" style="padding:8px"></div>
+      </div>
+    </div>
+    <button onclick="toggleTheme()"  id="theme-btn" style="padding:5px 10px;border-radius:7px;font-size:14px;cursor:pointer;border:1px solid rgba(255,255,255,0.4);background:rgba(255,255,255,0.12);color:#fff;transition:background .15s" title="Cambiar tema">☀️</button>
+    <button onclick="doLogout()"  style="padding:5px 12px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid rgba(255,255,255,0.4);background:rgba(255,255,255,0.12);color:#fff;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.22)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">Salir</button>
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- DASHBOARD -->
+    <div class="page" id="page-dashboard">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:15px;font-weight:600">Dashboard</div>
+        <select id="dash-periodo" onchange="renderDashboard()" style="font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text)">
+          <option value="1">Últimos 30 días</option>
+          <option value="3">Últimos 3 meses</option>
+          <option value="6" selected>Últimos 6 meses</option>
+          <option value="12">Último año</option>
+          <option value="0">Todo</option>
+        </select>
+      </div>
+
+      <!-- KPIs -->
+      <div class="dash-grid" id="dash-kpis"></div>
+
+      <!-- Charts row 1 -->
+      <div class="dash-charts">
+        <div class="dash-chart-card">
+          <div class="dash-chart-title">Tickets por mes</div>
+          <div class="dash-chart-wrap"><canvas id="chart-tickets-mes"></canvas></div>
+        </div>
+        <div class="dash-chart-card">
+          <div class="dash-chart-title">Tickets por tipo</div>
+          <div class="dash-chart-wrap"><canvas id="chart-tickets-tipo"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Charts row 2 -->
+      <div class="dash-charts">
+        <div class="dash-chart-card">
+          <div class="dash-chart-title">Stock por estado</div>
+          <div class="dash-chart-wrap"><canvas id="chart-stock-estado"></canvas></div>
+        </div>
+        <div class="dash-chart-card">
+          <div class="dash-chart-title">Destinos de envío</div>
+          <div id="dash-destinos" class="dash-destinos"></div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ALERTAS -->
+    <div class="page" id="page-alertas">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:15px;font-weight:600">Alertas</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline btn-sm" onclick="clearAllAlertas()">Cerrar todas</button>
+          <button class="btn btn-outline btn-sm" onclick="renderAlertas()">↻ Actualizar</button>
+        </div>
+      </div>
+      <div class="alerta-kpis" id="alerta-kpis"></div>
+      <div id="alerta-criticas-sec" class="alerta-section">
+        <div class="alerta-section-title critica">Críticas</div>
+        <div id="alerta-criticas"></div>
+      </div>
+      <div id="alerta-advertencias-sec" class="alerta-section">
+        <div class="alerta-section-title advertencia">Advertencias</div>
+        <div id="alerta-advertencias"></div>
+      </div>
+      <div id="alerta-informativas-sec" class="alerta-section">
+        <div class="alerta-section-title informativa">Informativas</div>
+        <div id="alerta-informativas"></div>
+      </div>
+      <div id="alerta-empty" class="alerta-empty" style="display:none">Sin alertas activas. Todo en orden.</div>
+      <div id="alerta-dismissed-sec" style="display:none"></div>
+    </div>
+
+    <!-- STOCK -->
+    <div class="page" id="page-stock">
+      <div class="summary" id="s-summary"></div>
+      <div class="controls">
+        <div class="sw"><span>&#128269;</span><input type="text" id="s-search" placeholder="Buscar serial, modelo, notas..." oninput="sApply()"></div>
+        <select id="s-cat" onchange="sApply()"><option value="">Todas las categorías</option><option>Notebook</option><option>Mini PC</option><option>Cargador notebook</option><option>Cargador mini PC</option></select>
+        <select id="s-est" onchange="sApply()"><option value="">Todos los estados</option><option>Operativo</option><option>Pending repair</option><option>Pending disposal</option><option>No operativo</option></select>
+        <select id="s-mod" onchange="sApply()"><option value="">Todos los modelos</option></select>
+        <select id="s-sort-col" onchange="sApply()">
+          <option value="modelo">Ordenar por modelo</option>
+          <option value="serial">Ordenar por serial</option>
+          <option value="estado">Ordenar por estado</option>
+          <option value="categoria">Ordenar por categoría</option>
+        </select>
+        <select id="s-sort-dir" onchange="sApply()">
+          <option value="1">A → Z</option>
+          <option value="-1">Z → A</option>
+        </select>
+        <button class="btn btn-outline" onclick="sExport()">Exportar CSV</button>
+        <button class="btn btn-primary" id="btn-add-stock" onclick="openSForm()" style="display:none">+ Agregar equipo</button>
+      </div>
+      <div class="ri" id="s-ri"></div>
+      <div class="tw"><table>
+        <thead><tr>
+          <th onclick="sSort('categoria')">Categoría ↕</th>
+          <th onclick="sSort('modelo')">Modelo ↕</th>
+          <th onclick="sSort('serial')">Serial ↕</th>
+          <th onclick="sSort('estado')">Estado ↕</th>
+          <th>Detalle</th><th>Venc. garantía</th><th>Notas</th>
+          <th id="th-acciones-stock">Acciones</th>
+        </tr></thead>
+        <tbody id="s-tbody"></tbody>
+      </table>
+      <div class="stpg" id="s-pg"></div></div>
+    </div>
+
+    <!-- TICKETS -->
+    <div class="page active" id="page-tickets">
+      <div class="summary" id="t-summary"></div>
+      <div class="controls">
+        <div class="sw"><span>&#128269;</span><input type="text" id="t-search" placeholder="Buscar RITM, serial, tracking, responsable..." oninput="tApply()"></div>
+        <select id="t-tipo" onchange="tApply()"><option value="">Todos los tipos</option><option value="Breeze">Breeze</option><option value="Install">Install</option><option value="Return">Return</option><option value="Repair">Repair</option><option value="Change class device">Change class device</option></select>
+        <select id="t-est" onchange="tApply()"><option value="">Todos los estados</option><option>En progreso</option><option>Terminado</option></select>
+        <select id="t-sort-col" onchange="tApply()">
+          <option value="envio_fecha">Ordenar por fecha</option>
+          <option value="ritm">Ordenar por RITM</option>
+          <option value="tipo">Ordenar por tipo</option>
+          <option value="envio_responsable">Ordenar por responsable</option>
+        </select>
+        <select id="t-sort-dir" onchange="tApply()">
+          <option value="-1">Más nuevo primero</option>
+          <option value="1">Más viejo primero</option>
+        </select>
+
+        <button class="btn btn-outline" onclick="tExport()">Exportar CSV</button>
+        <button class="btn btn-primary" id="btn-add-ticket" onclick="openTForm()" style="display:none">+ Nuevo ticket</button>
+        <button class="btn btn-outline" onclick="toggleBell()" title="Ver alertas">🔔 Alertas</button>
+      </div>
+      <div class="ri" id="t-ri"></div>
+      <div class="cards" id="t-cards"></div>
+      <div id="t-empty" class="empty" style="display:none">Sin tickets con esos filtros.</div>
+      <div class="pg" id="t-pg"></div>
+    </div>
+
+    <!-- HISTORIAL -->
+    <div class="page" id="page-historial">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:15px;font-weight:500">Historial de cambios</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <select id="h-tabla" onchange="hApply()"><option value="">Todas las tablas</option><option value="stock">Stock</option><option value="ticket">Tickets</option><option value="usuario">Usuarios</option></select>
+          <select id="h-user" onchange="hApply()"><option value="">Todos los usuarios</option></select>
+          <select id="h-sort-dir" onchange="hApply()">
+            <option value="-1">Más reciente primero</option>
+            <option value="1">Más antiguo primero</option>
+          </select>
+        </div>
+      </div>
+      <div class="ri" id="h-ri"></div>
+      <div id="h-list" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div id="h-empty" class="empty" style="display:none">Sin registros.</div>
+      <div class="pg" id="h-pg"></div>
+    </div>
+
+    <!-- USUARIOS (solo admin) -->
+    <div class="page" id="page-usuarios">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:15px;font-weight:500">Gestión de usuarios</div>
+        <button class="btn btn-primary" onclick="openUForm()">+ Crear usuario</button>
+      </div>
+      <div class="user-list" id="u-list"></div>
+    </div>
+
+    <!-- RETURNS -->
+    <div class="page" id="page-returns">
+      <div class="summary" id="r-summary"></div>
+      <div class="controls">
+        <div class="sw"><span>&#128269;</span><input type="text" id="r-search" placeholder="Buscar serial, modelo, RITM, comentarios..." oninput="rApply()"></div>
+        <select id="r-tipo" onchange="rApply()">
+          <option value="">Todos los tipos</option>
+          <option value="repair">Repair</option>
+          <option value="return">Return</option>
+          <option value="ingreso">Ingreso</option>
+          <option value="device">Device class change</option>
+        </select>
+        <select id="r-equipo" onchange="rApply()">
+          <option value="">Todos los equipos</option>
+          <option value="Notebook">Notebook</option>
+          <option value="Mini">Mini Desktop</option>
+        </select>
+        <select id="r-semana" onchange="rApply()"><option value="">Todas las semanas</option></select>
+        <select id="r-sort-col" onchange="rApply()">
+          <option value="fecha_llegada">Ordenar por fecha</option>
+          <option value="modelo">Ordenar por modelo</option>
+          <option value="serial">Ordenar por serial</option>
+          <option value="semana">Ordenar por semana</option>
+        </select>
+        <select id="r-sort-dir" onchange="rApply()">
+          <option value="-1">Más nuevo primero</option>
+          <option value="1">Más viejo primero</option>
+        </select>
+        <button class="btn btn-outline" onclick="rExport()">Exportar CSV</button>
+        <button class="btn btn-primary" id="btn-add-return" onclick="openRForm()" style="display:none">+ Agregar return</button>
+      </div>
+      <div class="ri" id="r-ri"></div>
+      <div class="cards" id="r-cards"></div>
+      <div id="r-empty" class="empty" style="display:none">Sin returns con esos filtros.</div>
+      <div class="pg" id="r-pg"></div>
+    </div>
+
+
+    <!-- GUÍAS COURIER -->
+    <div class="page" id="page-guias">
+      <div class="summary" id="g-summary"></div>
+      <div class="controls">
+        <div class="sw"><span>&#128269;</span>
+          <input type="text" id="g-search" placeholder="Buscar RITM, número de guía..." oninput="gApply()">
+        </div>
+        <select id="g-tipo" onchange="gApply()">
+          <option value="">Todos los tipos</option>
+          <option>Install</option><option>Return</option><option>Repair</option>
+        </select>
+        <select id="g-mes" onchange="gApply()"><option value="">Todos los meses</option></select>
+        <select id="g-sort-col" onchange="gApply()">
+          <option value="fecha">Ordenar por fecha</option>
+          <option value="ritm">Ordenar por RITM</option>
+          <option value="tipo">Ordenar por tipo</option>
+        </select>
+        <select id="g-sort-dir" onchange="gApply()">
+          <option value="-1">Más nuevo primero</option>
+          <option value="1">Más viejo primero</option>
+        </select>
+        <button class="btn btn-outline" onclick="gExport()">Exportar CSV</button>
+        <button class="btn btn-primary" id="btn-add-guia" onclick="openGForm()" style="display:none">+ Agregar guía</button>
+      </div>
+      <div class="ri" id="g-ri"></div>
+      <div class="tw"><table>
+        <thead><tr>
+          <th onclick="gSort('ritm')" style="cursor:pointer">RITM ↕</th>
+          <th onclick="gSort('tipo')" style="cursor:pointer">Tipo ↕</th>
+          <th onclick="gSort('fecha')" style="cursor:pointer">Fecha ↕</th>
+          <th>Guía de envío</th>
+          <th>Guía de regreso</th>
+          <th id="th-acc-guias">Acciones</th>
+        </tr></thead>
+        <tbody id="g-tbody"></tbody>
+      </table>
+      <div class="stpg" id="g-pg"></div></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Sync toast -->
+<div class="sync-log" id="sync-log">
+  <div class="sl-title">Stock actualizado automáticamente</div>
+  <div id="sync-items"></div>
+</div>
+
+<!-- Stock form -->
+<div class="mb" id="s-modal">
+  <div class="mo">
+    <div class="moh"><h2 id="s-mt">Agregar equipo</h2><button class="xbtn" onclick="closeSForm()">✕</button></div>
+    <div class="mob">
+      <div class="fg-row">
+        <div class="fg"><label>Categoría</label><select id="sm-cat"><option>Notebook</option><option>Mini PC</option><option>Cargador notebook</option><option>Cargador mini PC</option></select></div>
+        <div class="fg"><label>Estado</label><select id="sm-est"><option>Operativo</option><option>Pending repair</option><option>Pending disposal</option><option>No operativo</option></select></div>
+      </div>
+      <div class="fg-row">
+        <div class="fg"><label>Modelo</label><input type="text" id="sm-mod" placeholder="Elitebook 850 G8"></div>
+        <div class="fg"><label>Serial</label>
+          <input type="text" id="sm-ser" placeholder="5CG2190QMC" oninput="checkStockDuplicate()">
+          <div id="sm-ser-hint"></div>
+        </div>
+      </div>
+      <div class="fg-row">
+        <div class="fg"><label>Detalle / falla</label><input type="text" id="sm-det"></div>
+        <div class="fg"><label>Venc. garantía</label><input type="text" id="sm-gar"></div>
+      </div>
+      <div class="fg"><label>Notas</label><textarea id="sm-not"></textarea></div>
+      <div class="fg" id="sm-asignado-row" style="display:none">
+        <label>Asignado a ticket</label>
+        <input type="text" id="sm-asignado" readonly style="background:var(--amber-bg);color:var(--amber-t)">
+      </div>
+    </div>
+    <div class="mof"><button class="btn btn-outline" onclick="closeSForm()">Cancelar</button><button class="btn btn-primary" onclick="saveSItem()">Guardar</button></div>
+  </div>
+</div>
+
+<!-- Ticket form -->
+<div class="mb" id="t-modal">
+  <div class="mo">
+    <div class="moh"><h2 id="t-mt">Nuevo ticket</h2><button class="xbtn" onclick="closeTForm()">✕</button></div>
+    <div class="mob">
+      <div class="mos">
+        <div class="most">Datos generales</div>
+        <div class="fg-row3">
+          <div class="fg"><label>Tipo</label><select id="tm-tipo" onchange="onTipoChange()"><option value="Breeze">Breeze</option><option value="Install">Install</option><option value="Return">Return</option><option value="Repair">Repair</option><option value="Change class device">Change class device</option></select></div>
+          <div class="fg"><label>RITM</label><input type="text" id="tm-ritm" placeholder="RITM3XXXXXX"></div>
+          <div class="fg"><label>Estado</label><select id="tm-est"><option>En progreso</option><option>Terminado</option></select></div>
+        </div>
+        <div id="tm-tdesc" class="tipo-desc"></div>
+      </div>
+      <div class="mos">
+        <div class="most" style="color:var(--teal-t)">Envío</div>
+        <div id="tm-retnote" class="return-note" style="display:none">Para un Return se envía una caja con insumos al usuario.</div>
+        <div class="fg-row"><div class="fg"><label>Courier</label><input type="text" id="tm-ecourier"></div><div class="fg"><label>Responsable</label><input type="text" id="tm-eresp"></div></div>
+        <div class="fg-row"><div class="fg"><label>Tracking envío</label><input type="text" id="tm-etrack"></div><div class="fg"><label>Fecha envío</label><input type="date" id="tm-efecha"></div></div>
+        <div class="fg"><label>Dirección</label><input type="text" id="tm-edir"></div>
+        <div id="tm-eserial-grp" class="fg"><label>Serial enviado</label><input type="text" id="tm-eserial" oninput="checkSerial('tm-eserial','tm-hint-e')"><div id="tm-hint-e"></div></div>
+        <div id="tm-etrabajo-grp">
+          <div class="fg"><label>Trabajo / diagnóstico</label><textarea id="tm-etrabajo"></textarea></div>
+          <div class="fg-row"><div class="fg"><label>Resultado test</label><input type="text" id="tm-etest"></div><div class="fg"><label>Condición</label><input type="text" id="tm-econd"></div></div>
+        </div>
+      </div>
+      <div class="mos" id="tm-dev-sec">
+        <div class="most" style="color:var(--blue-t)">Devolución</div>
+        <div class="fg-row"><div class="fg"><label>Responsable dev.</label><input type="text" id="tm-dresp"></div><div class="fg"><label>Dirección dev.</label><input type="text" id="tm-ddir"></div></div>
+        <div class="fg-row"><div class="fg"><label>Tracking devolución</label><input type="text" id="tm-dtrack"></div><div class="fg"><label>Fecha devolución</label><input type="date" id="tm-dfecha"></div></div>
+        <div class="fg"><label>Serial recibido</label><input type="text" id="tm-dserial" oninput="checkSerial('tm-dserial','tm-hint-d')"><div id="tm-hint-d"></div></div>
+        <div class="fg"><label>Trabajo / diagnóstico dev.</label><textarea id="tm-dtrabajo"></textarea></div>
+        <div class="fg-row"><div class="fg"><label>Test dev.</label><input type="text" id="tm-dtest"></div><div class="fg"><label>Condición</label><input type="text" id="tm-dcond"></div></div>
+      </div>
+      <div class="fg"><label>Comentarios</label><textarea id="tm-comentarios"></textarea></div>
+    </div>
+    <div class="mof"><button class="btn btn-outline" onclick="closeTForm()">Cancelar</button><button class="btn btn-primary" onclick="saveTItem()">Guardar ticket</button></div>
+  </div>
+</div>
+
+<!-- Usuario form (admin) -->
+<div class="mb" id="u-modal">
+  <div class="mo" style="max-width:440px">
+    <div class="moh"><h2 id="u-mt">Crear usuario</h2><button class="xbtn" onclick="closeUForm()">✕</button></div>
+    <div class="mob">
+      <div class="fg"><label>Nombre completo</label><input type="text" id="um-nombre" placeholder="Juan Pérez"></div>
+      <div class="fg"><label>Email</label><input type="email" id="um-email" placeholder="juan@empresa.com"></div>
+      <div class="fg" id="um-pass-grp"><label>Contraseña temporal</label><input type="text" id="um-pass" placeholder="Mínimo 6 caracteres"></div>
+      <div class="fg"><label>Rol</label>
+        <select id="um-rol">
+          <option value="viewer">Viewer — solo lectura y exportar</option>
+          <option value="editor">Editor — puede agregar y editar</option>
+          <option value="admin">Admin — acceso total + usuarios</option>
+        </select>
+      </div>
+      <div id="um-err" style="display:none;background:var(--red-bg);color:var(--red-t);border-radius:8px;padding:8px 12px;font-size:13px;margin-top:8px"></div>
+    </div>
+    <div class="mof"><button class="btn btn-outline" onclick="closeUForm()">Cancelar</button><button class="btn btn-primary" id="um-save-btn" onclick="saveUItem()">Crear usuario</button></div>
+  </div>
+</div>
+
+
+
+<!-- Guías form -->
+<div class="mb" id="g-modal">
+  <div class="mo" style="max-width:520px">
+    <div class="moh"><h2 id="g-mt">Agregar guía</h2><button class="xbtn" onclick="closeGForm()">✕</button></div>
+    <div class="mob">
+      <div class="fg-row3">
+        <div class="fg"><label>Tipo</label>
+          <select id="gm-tipo"><option>Install</option><option>Return</option><option>Repair</option></select>
+        </div>
+        <div class="fg"><label>Fecha</label><input type="date" id="gm-fecha"></div>
+        <div class="fg"><label>RITM</label><input type="text" id="gm-ritm" placeholder="RITM3XXXXXX"></div>
+      </div>
+      <div class="fg"><label>Número de guía de envío</label><input type="text" id="gm-env" placeholder="DHL 1234567890"></div>
+      <div class="fg"><label>Número de guía de regreso</label><input type="text" id="gm-reg" placeholder="DHL 9876543210"></div>
+    </div>
+    <div class="mof">
+      <button class="btn btn-outline" onclick="closeGForm()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveGItem()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Ticket detail modal -->
+<div class="mb" id="td-modal">
+  <div class="mo" style="max-width:720px">
+    <div class="moh" id="td-header">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:16px;font-weight:500" id="td-ritm"></span>
+          <span class="badge" id="td-tipo-badge"></span>
+          <span class="badge" id="td-estado-badge"></span>
+        </div>
+        <div style="font-size:12px;color:var(--text2);margin-top:4px" id="td-resp"></div>
+      </div>
+      <button class="xbtn" onclick="closeTDetail()">✕</button>
+    </div>
+    <div class="mob" id="td-body"></div>
+    <div class="mof" id="td-footer">
+      <button class="btn btn-outline btn-sm" id="td-stock-btn" onclick="goToStock()" style="display:none;margin-right:auto">Ver en stock →</button>
+      <button class="btn btn-outline btn-sm" id="td-estado-btn" onclick="tdToggleEstado()"></button>
+      <button class="btn btn-outline btn-sm" id="td-edit-btn" onclick="tdEdit()" style="display:none">✎ Editar</button>
+      <button class="btn btn-outline btn-sm" id="td-del-btn" onclick="tdDelete()" style="display:none;color:var(--red-t);border-color:var(--red-b)">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Global Search Modal -->
+<div id="gsearch-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;align-items:flex-start;justify-content:center;padding-top:80px;display:none">
+  <div style="background:var(--surface);border-radius:14px;width:100%;max-width:620px;margin:0 16px;border:1px solid var(--border);box-shadow:0 16px 40px rgba(0,0,0,.2)">
+    <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:center">
+      <span style="font-size:16px;color:var(--text3)">🔍</span>
+      <input type="text" id="gsearch-input" placeholder="Buscar serial, RITM, modelo, tracking..." 
+        style="flex:1;border:none;background:none;font-size:15px;color:var(--text);outline:none"
+        oninput="runGlobalSearch()" onkeydown="if(event.key==='Escape')closeGlobalSearch()">
+      <button onclick="closeGlobalSearch()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:18px">✕</button>
+    </div>
+    <div id="gsearch-results" style="max-height:420px;overflow-y:auto;padding:8px"></div>
+  </div>
+</div>
+
+
+<!-- Vista 360 Modal -->
+<div id="v360-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:350;align-items:flex-start;justify-content:center;padding-top:60px;display:none">
+  <div style="background:var(--surface);border-radius:14px;width:100%;max-width:700px;margin:0 16px;border:1px solid var(--border);box-shadow:0 16px 40px rgba(0,0,0,.2);max-height:85vh;overflow-y:auto">
+    <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);z-index:1">
+      <div>
+        <div style="font-size:16px;font-weight:700;font-family:monospace" id="v360-serial"></div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px" id="v360-modelo"></div>
+      </div>
+      <button onclick="closeV360()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:20px">✕</button>
+    </div>
+    <div id="v360-body" style="padding:16px 18px"></div>
+  </div>
+</div>
+
+<!-- Returns form -->
+<div class="mb" id="r-modal">
+  <div class="mo" style="max-width:560px">
+    <div class="moh"><h2 id="r-mt">Agregar return</h2><button class="xbtn" onclick="closeRForm()">✕</button></div>
+    <div class="mob">
+      <div class="fg-row3">
+        <div class="fg"><label>Marca</label><input type="text" id="rm-marca" value="HP"></div>
+        <div class="fg"><label>Tipo de equipo</label>
+          <select id="rm-equipo"><option>Notebook</option><option>Mini Desktop</option><option>Otro</option></select>
+        </div>
+        <div class="fg"><label>Semana</label><input type="text" id="rm-semana" placeholder="48"></div>
+      </div>
+      <div class="fg"><label>Modelo</label><input type="text" id="rm-modelo" placeholder="HP EliteBook 850 G8"></div>
+      <div class="fg-row">
+        <div class="fg"><label>Serial</label><input type="text" id="rm-serial" placeholder="5CG2190QMC"></div>
+        <div class="fg"><label>Condición</label><input type="text" id="rm-condicion" placeholder="USADA"></div>
+      </div>
+      <div class="fg-row">
+        <div class="fg"><label>Fecha de llegada</label><input type="date" id="rm-fecha"></div>
+        <div class="fg"><label>RITM</label><input type="text" id="rm-ritm" placeholder="RITM3XXXXXX"></div>
+      </div>
+      <div class="fg"><label>Comentarios</label><textarea id="rm-comentarios" placeholder="repair / return / ingreso..."></textarea></div>
+      <div class="fg"><label>Notas del RITM</label><input type="text" id="rm-ritm-notas" placeholder="Observaciones adicionales"></div>
+    </div>
+    <div class="mof"><button class="btn btn-outline" onclick="closeRForm()">Cancelar</button><button class="btn btn-primary" onclick="saveRItem()">Guardar</button></div>
+  </div>
+</div>
+
+<script>
+const SUPA_URL='https://rbpfyvjqkkhmktvfojon.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJicGZ5dmpxa2tobWt0dmZvam9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxMDI1MzUsImV4cCI6MjA4OTY3ODUzNX0.Tr6uDvAD0kEuMYbZRX7QiStYM2zWmNHM5f3PvNC9d9I';
+const sb=supabase.createClient(SUPA_URL,SUPA_KEY);
+
+// ── STATE ──
+let stock=[],tickets=[],historial=[],usuarios=[];
+let sFiltered=[],tFiltered=[],hFiltered=[];
+let sSortCol='',sSortDir=1,sPage=1,sEditId=null;
+let tSortCol='envio_fecha',tSortDir=-1,tPage=1,tEditId=null,tOpenCard=null;
+let hPage=1;
+let currentUser=null,currentPerfil=null;
+const PS=25;
+
+const TIPO_INFO={
+  'Breeze':'Envío de equipo nuevo. El viejo pasa a Pending disposal automáticamente.',
+  'Install':'Solo envío. Ingreso de personal nuevo.',
+  'Return':'Desvinculación: usuario devuelve su equipo. Se envía caja con insumos.',
+  'Repair':'Falla técnica: se envía reemplazo, el usuario devuelve el fallado.',
+  'Change class device':'Usuario solicita cambio por equipo de diferentes características.'
+};
+const CAT_CLS={'Notebook':'b-nb','Mini PC':'b-mpc','Cargador notebook':'b-cnb','Cargador mini PC':'b-cmpc'};
+const EST_CLS={'Operativo':'e-op','Operativa':'e-op','Pending repair':'e-rep','Pending disposal':'e-dis','No operativo':'e-nop','No operativa':'e-nop'};
+const TIPO_CLS={'Breeze':'t-breeze','Install':'t-install','Return':'t-return','Repair':'t-bnf','Change class device':'t-ccd'};
+const ROL_COLORS={'admin':'#7f77dd','editor':'#1d9e75','viewer':'#888780'};
+
+// ── AUTH ──
+async function initAuth(){
+  document.getElementById('loading-msg').textContent='Verificando sesión...';
+  const {data:{session}}=await sb.auth.getSession();
+  if(session){
+    await loadUserProfile(session.user);
+    await bootApp();
+  } else {
+    showLoginPage();
+  }
+}
+
+async function loadUserProfile(user){
+  currentUser=user;
+  const {data}=await sb.from('perfiles').select('*').eq('id',user.id).single();
+  currentPerfil=data;
+}
+
+function showLoginPage(){
+  document.getElementById('loading-overlay').style.display='none';
+  document.getElementById('login-page').style.display='block';
+}
+
+async function doLogin(){
+  const email=document.getElementById('li-email').value.trim();
+  const pass=document.getElementById('li-pass').value;
+  const errEl=document.getElementById('login-err');
+  errEl.style.display='none';
+  if(!email||!pass){errEl.textContent='Completá todos los campos.';errEl.style.display='block';return;}
+  document.getElementById('loading-overlay').style.display='flex';
+  document.getElementById('loading-msg').textContent='Ingresando...';
+  const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){
+    document.getElementById('loading-overlay').style.display='none';
+    errEl.textContent=error.message==='Invalid login credentials'?'Email o contraseña incorrectos.':error.message;
+    errEl.style.display='block';
+    return;
+  }
+  await loadUserProfile(data.user);
+  await bootApp();
+}
+
+async function doLogout(){
+  await sb.auth.signOut();
+  location.reload();
+}
+
+async function bootApp(){
+  document.getElementById('loading-msg').textContent='Cargando datos...';
+  document.getElementById('login-page').style.display='none';
+
+  // Apply role to UI
+  const rol=currentPerfil?.rol||'viewer';
+  const canEdit=rol==='admin'||rol==='editor';
+  const isAdmin=rol==='admin';
+
+  // Nav user chip
+  const nombre=currentPerfil?.nombre||currentUser.email;
+  document.getElementById('nav-nombre').textContent=nombre;
+  document.getElementById('nav-avatar').textContent=nombre.slice(0,2).toUpperCase();
+  document.getElementById('nav-avatar').style.background=`${ROL_COLORS[rol]}22`;
+  document.getElementById('nav-avatar').style.color=ROL_COLORS[rol];
+  const rolBadge=document.getElementById('nav-rol');
+  rolBadge.textContent=rol;rolBadge.className=`rol-badge rol-${rol}`;
+
+  if(isAdmin) document.getElementById('nav-usuarios').style.display='block';
+  else document.getElementById('nav-usuarios').style.display='none';
+  if(canEdit){
+    document.getElementById('btn-add-stock').style.display='';
+    document.getElementById('btn-add-ticket').style.display='';
+    document.getElementById('btn-add-return').style.display='';
+    document.getElementById('btn-add-guia').style.display='';
+  }
+
+  try{await loadAll();}catch(e){console.warn('loadAll:',e);stock=[];tickets=[];}
+  try{tBuildRespFilter();}catch(e){console.warn('respFilter:',e);}
+  try{tApply();}catch(e){console.warn('tApply:',e);}
+  try{await reloadReturns();}catch(e){console.warn('returns:',e);}
+  try{await reloadGuias();}catch(e){console.warn('guias:',e);}
+  setupRealtime();
+  renderAlertas();
+  document.getElementById('loading-overlay').style.display='none';
+  document.getElementById('app').style.display='block';
+}
+
+// ── DATA ──
+async function loadAll(){
+  const [sr,tr]=await Promise.all([
+    sb.from('stock').select('*').order('created_at',{ascending:false}),
+    sb.from('tickets').select('*').order('created_at',{ascending:false})
+  ]);
+  stock=sr.data||[];tickets=tr.data||[];
+  sApply();
+}
+async function reloadStock(){const{data}=await sb.from('stock').select('*').order('created_at',{ascending:false});if(data){stock=data;sApply();}}
+async function reloadTickets(){const{data}=await sb.from('tickets').select('*').order('created_at',{ascending:false});if(data){tickets=data;tBuildRespFilter();tApply();}}
+async function reloadHistorial(){
+  const{data}=await sb.from('historial').select('*').order('created_at',{ascending:false}).limit(200);
+  if(data){historial=data;hBuildFilters();hApply();}
+}
+async function reloadUsuarios(){
+  const{data}=await sb.from('perfiles').select('*').order('created_at',{ascending:false});
+  if(data){usuarios=data;renderUsuarios();}
+}
+
+function setupRealtime(){
+  sb.channel('db-changes')
+    .on('postgres_changes',{event:'*',schema:'public',table:'stock'},()=>reloadStock())
+    .on('postgres_changes',{event:'*',schema:'public',table:'tickets'},()=>reloadTickets())
+    .on('postgres_changes',{event:'*',schema:'public',table:'historial'},()=>reloadHistorial())
+    .on('postgres_changes',{event:'*',schema:'public',table:'returns'},()=>reloadReturns())
+    .on('postgres_changes',{event:'*',schema:'public',table:'guias'},()=>reloadGuias())
+    .subscribe();
+}
+
+// ── HISTORIAL ──
+async function logAction(accion,tabla,registroId,detalle){
+  await sb.from('historial').insert({
+    usuario_id:currentUser.id,
+    usuario_nombre:currentPerfil?.nombre||currentUser.email,
+    accion,tabla,
+    registro_id:String(registroId||''),
+    detalle
+  });
+}
+
+// ── NAV ──
+function showPage(id,tab){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  tab.classList.add('active');
+  if(id==='stock')sApply();
+  if(id==='tickets'){tBuildRespFilter();tApply();}
+  if(id==='historial')reloadHistorial();
+  if(id==='returns')reloadReturns();
+  if(id==='dashboard')renderDashboard();
+  if(id==='alertas')renderAlertas();
+  if(id==='guias')reloadGuias();
+  if(id==='usuarios')reloadUsuarios();
+}
+
+// ── HELPERS ──
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function fmtFecha(s){
+  if(!s)return'—';
+  const m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m)return`${m[3]}-${m[2]}-${m[1]}`;
+  return s;
+}
+function findStock(serial){
+  if(!serial||serial.length<4)return null;
+  const s=serial.toLowerCase().trim();
+  return stock.find(x=>x.serial&&x.serial.toLowerCase().trim()===s)||null;
+}
+function isCaja(s){if(!s)return false;const l=s.toLowerCase();return l.includes('caja')||l.includes('insumos')||l.includes('return');}
+function canEdit(){const r=currentPerfil?.rol;return r==='admin'||r==='editor';}
+function isAdmin(){return currentPerfil?.rol==='admin';}
+function timeAgo(iso){
+  const d=new Date(iso),now=new Date(),diff=Math.floor((now-d)/1000);
+  if(diff<60)return'hace un momento';
+  if(diff<3600)return`hace ${Math.floor(diff/60)} min`;
+  if(diff<86400)return`hace ${Math.floor(diff/3600)} h`;
+  return d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+}
+
+// ── STOCK ──
+function sBuildModelFilter(){
+  const models=[...new Set(stock.map(d=>d.modelo||'').filter(Boolean))].sort();
+  const sel=document.getElementById('s-mod'),cur=sel.value;
+  sel.innerHTML='<option value="">Todos los modelos</option>'+models.map(m=>`<option${m===cur?' selected':''}>${m}</option>`).join('');
+}
+function sApply(){
+  const q=document.getElementById('s-search').value.toLowerCase();
+  const cat=document.getElementById('s-cat').value;
+  const est=document.getElementById('s-est').value;
+  const mod=document.getElementById('s-mod').value;
+  sFiltered=stock.filter(d=>{
+    const txt=((d.modelo||'')+(d.serial||'')+(d.notas||'')+(d.detalle||'')).toLowerCase();
+    return(!q||txt.includes(q))&&(!cat||d.categoria===cat)&&(!est||(d.estado===est)||(est==='Operativo'&&d.estado==='Operativa')||(est==='No operativo'&&d.estado==='No operativa'))&&(!mod||(d.modelo||'').trim()===mod);
+  });
+  const _ssc=document.getElementById('s-sort-col')?.value||'modelo';
+  const _ssd=parseInt(document.getElementById('s-sort-dir')?.value||'1');
+  sFiltered.sort((a,b)=>((a[_ssc]||'').localeCompare(b[_ssc]||''))*_ssd);
+  sPage=1;sRender();
+}
+function sSort(col){sSortCol===col?sSortDir*=-1:(sSortCol=col,sSortDir=1);sApply();}
+function sRender(){
+  sBuildModelFilter();
+  const start=(sPage-1)*PS,end=start+PS,rows=sFiltered.slice(start,end);
+  document.getElementById('s-ri').textContent=`${sFiltered.length} equipos`;
+  const ce=canEdit();
+  if(!rows.length){document.getElementById('s-tbody').innerHTML='<tr><td colspan="8" class="empty">Sin resultados.</td></tr>';sPg();sSummary();return;}
+  document.getElementById('s-tbody').innerHTML=rows.map(d=>`<tr>
+    <td><span class="badge ${CAT_CLS[d.categoria]||'b-cnb'}">${esc(d.categoria)}</span></td>
+    <td>${esc(d.modelo)}</td>
+    <td><span class="mono" style="cursor:pointer;color:var(--teal-b);text-decoration:underline" onclick="openV360('${esc(d.serial||'')}')" title="Ver historial completo">${esc((d.serial||'').toUpperCase())}</span></td>
+    <td>
+      <span class="badge ${EST_CLS[d.estado]||'e-op'}">${esc(d.estado)}</span>
+      ${d.asignado_ritm?`<span class="badge e-asignado" onclick="goToTicketByRitm('${esc(d.asignado_ritm)}')" title="Ver ticket">En ticket · ${esc(d.asignado_ritm)}</span>`:''}
+    </td>
+    <td style="font-size:12px;color:var(--text2)">${esc(d.detalle||'')}</td>
+    <td style="font-size:12px;color:var(--text2)">${esc(d.venc_garantia||'')}</td>
+    <td>${d.notas?`<span class="nota-chip" title="${esc(d.notas)}">${esc(d.notas)}</span>`:''}</td>
+    <td>${ce?`<div class="ab"><button class="ib" onclick="openSForm('${d.id}')">✎</button>${isAdmin()?`<button class="ib del" onclick="sDelete('${d.id}','${esc(d.serial)}')">✕</button>`:''}</div>`:'—'}</td>
+  </tr>`).join('');
+  sPg();sSummary();
+}
+function sPg(){
+  const total=Math.ceil(sFiltered.length/PS),p=document.getElementById('s-pg');
+  p.innerHTML=total<=1?'':`<button class="pb" onclick="sChPage(${sPage-1})" ${sPage===1?'disabled':''}>← Anterior</button>
+    <span style="font-size:12px;color:var(--text2)">Pág. ${sPage}/${total}</span>
+    <button class="pb" onclick="sChPage(${sPage+1})" ${sPage===total?'disabled':''}>Siguiente →</button>`;
+}
+function sChPage(n){sPage=n;sRender();}
+function sSummary(){
+  const c={},e={};
+  stock.forEach(d=>{
+    c[d.categoria]=(c[d.categoria]||0)+1;
+    const ne=d.estado==='Operativa'?'Operativo':d.estado==='No operativa'?'No operativo':d.estado;
+    e[ne]=(e[ne]||0)+1;
+  });
+  const items=[['Notebook','#1d9e75'],['Mini PC','#7f77dd'],['Cargador notebook','#888780'],['Cargador mini PC','#378add'],['Operativo','#1d9e75'],['Pending repair','#ba7517'],['Pending disposal','#d85a30'],['No operativo','#e24b4a']];
+  document.getElementById('s-summary').innerHTML=items.map(([n,col])=>`<div class="sc" style="border-top:3px solid ${col}"><div class="lbl">${n}</div><div class="val">${c[n]||e[n]||0}</div><div class="sub">equipos</div></div>`).join('')+
+    `<div class="sc" style="border-top:3px solid var(--teal-b)"><div class="lbl">Total</div><div class="val">${stock.length}</div><div class="sub">equipos</div></div>`;
+}
+async function openSForm(id=null){
+  if(!canEdit())return;
+  sEditId=id;const d=id?stock.find(x=>x.id===id):null;
+  document.getElementById('s-mt').textContent=d?'Editar equipo':'Agregar equipo';
+  const f=(el,v)=>document.getElementById(el).value=v||'';
+  f('sm-cat',d?d.categoria:'Notebook');f('sm-est',d?d.estado:'Operativo');
+  f('sm-mod',d?d.modelo:'');f('sm-ser',d?d.serial:'');
+  f('sm-det',d?d.detalle:'');f('sm-gar',d?d.venc_garantia:'');f('sm-not',d?d.notas:'');
+  const asigRow=document.getElementById('sm-asignado-row');
+  const asigInp=document.getElementById('sm-asignado');
+  if(d&&d.asignado_ritm){
+    asigRow.style.display='';
+    asigInp.value=d.asignado_ritm;
+  } else {
+    asigRow.style.display='none';
+    asigInp.value='';
+  }
+  document.getElementById('s-modal').classList.add('open');
+}
+function closeSForm(){
+  document.getElementById('s-modal').classList.remove('open');
+  const h=document.getElementById('sm-ser-hint');
+  if(h)h.innerHTML='';
+}
+async function saveSItem(){
+  const g=id=>document.getElementById(id).value.trim();
+  if(!g('sm-mod')||!g('sm-ser')){alert('Modelo y serial son obligatorios.');return;}
+  // Check duplicate
+  const _newSerial = g('sm-ser').toUpperCase().trim();
+  const _dupItem = stock.find(s=>(s.serial||'').toUpperCase().trim()===_newSerial);
+  if(_dupItem && _dupItem.id !== sEditId) {
+    if(!confirm(`⚠️ El serial ${_newSerial} ya existe en stock como "${_dupItem.modelo}" (${_dupItem.estado}).\n\n¿Querés guardarlo igual?`)) return;
+  }
+  const item={categoria:g('sm-cat'),estado:g('sm-est'),modelo:g('sm-mod'),serial:g('sm-ser'),detalle:g('sm-det'),venc_garantia:g('sm-gar'),notas:g('sm-not')};
+  const isNew=!sEditId;
+  let res;
+  if(sEditId){
+    const old=stock.find(x=>x.id===sEditId);
+    res=await sb.from('stock').update(item).eq('id',sEditId);
+    if(!res.error) await logAction(isNew?'Agregó equipo':'Editó equipo','stock',sEditId,{antes:old,despues:item});
+  } else {
+    res=await sb.from('stock').insert(item);
+    if(!res.error) await logAction('Agregó equipo','stock','nuevo',item);
+  }
+  if(res.error){alert('Error: '+res.error.message);return;}
+  closeSForm();await reloadStock();
+}
+async function sDelete(id,serial){
+  if(!isAdmin())return;
+  if(!confirm(`¿Eliminar ${serial}?`))return;
+  const item=stock.find(x=>x.id===id);
+  await sb.from('stock').delete().eq('id',id);
+  await logAction('Eliminó equipo','stock',id,item);
+  await reloadStock();
+}
+function sExport(){
+  const h=['Categoría','Modelo','Serial','Estado','Detalle','Venc. Garantía','Notas'];
+  const rows=sFiltered.map(d=>[d.categoria,d.modelo,d.serial,d.estado,d.detalle||'',d.venc_garantia||'',d.notas||''].map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(','));
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent('\uFEFF'+[h.join(','),...rows].join('\n'));
+  a.download='stock.csv';a.click();
+}
+
+
+// ── STOCK ASSIGNMENT ──
+const ASSIGN_TYPES = ['Repair', 'Breeze', 'Change class device'];
+
+async function assignStockToTicket(ticket) {
+  if (!ASSIGN_TYPES.includes(ticket.tipo)) return;
+  if (ticket.estado !== 'En progreso') return;
+  const serials = [ticket.envio_serial, ticket.dev_serial].filter(s => s && s.length > 4 && !isCaja(s));
+  for (const serial of serials) {
+    const item = findStock(serial);
+    if (item && !item.asignado_ritm) {
+      await sb.from('stock').update({asignado_ritm: ticket.ritm}).eq('id', item.id);
+    }
+  }
+  await reloadStock();
+}
+
+async function unassignStockFromTicket(ritm) {
+  // Remove asignado_ritm from all stock items assigned to this ticket
+  const assigned = stock.filter(s => s.asignado_ritm === ritm);
+  for (const item of assigned) {
+    await sb.from('stock').update({asignado_ritm: ''}).eq('id', item.id);
+  }
+}
+
+
+// ── AUTO RETURN FROM TICKET ──
+async function createReturnFromTicket(ticket){
+  const dSerial=ticket.dev_serial;
+  if(!dSerial||isCaja(dSerial)||dSerial.trim().length<4)return;
+  
+  // Only for types that have a real device coming back
+  const returnTypes=['Return','Repair','Breeze','Change class device'];
+  if(!returnTypes.includes(ticket.tipo))return;
+
+  // Check if a return with this serial + ritm already exists
+  const{data:existing}=await sb.from('returns').select('id').eq('serial',dSerial).eq('ritm',ticket.ritm);
+  if(existing&&existing.length>0)return; // already exists, skip
+
+  // Determine comment based on ticket type
+  const comentMap={
+    'Return':'return',
+    'Repair':'repair',
+    'Breeze':'pending disposal',
+    'Change class device':'device class change'
+  };
+
+  // Try to get modelo from stock if equipo exists there
+  const stockItem=findStock(dSerial);
+  const modelo=stockItem?stockItem.modelo:'';
+
+  const newReturn={
+    marca:'HP',
+    equipo:stockItem?(stockItem.categoria==='Mini PC'?'Mini Desktop':'Notebook'):'Notebook',
+    modelo:modelo,
+    serial:dSerial.toUpperCase(),
+    condicion:'USADA',
+    fecha_llegada:ticket.dev_fecha||new Date().toISOString().split('T')[0],
+    comentarios:comentMap[ticket.tipo]||'ingreso',
+    ritm:ticket.ritm,
+    ritm_notas:'Creado automáticamente desde ticket',
+    semana:getWeekNumber(ticket.dev_fecha||new Date().toISOString().split('T')[0])
+  };
+
+  const{error}=await sb.from('returns').insert(newReturn);
+  if(!error){
+    showSyncToast([
+      `• Return creado automáticamente`,
+      `• Serial: ${dSerial.toUpperCase()}`,
+      `• RITM: ${ticket.ritm}`
+    ]);
+    await reloadReturns();
+  }
+}
+
+function getWeekNumber(dateStr){
+  if(!dateStr)return'';
+  try{
+    const d=new Date(dateStr);
+    const start=new Date(d.getFullYear(),0,1);
+    return String(Math.ceil(((d-start)/86400000+start.getDay()+1)/7));
+  }catch(e){return'';}
+}
+
+// ── SYNC ENGINE ──
+async function syncStockFromTicket(ticket){
+  const changes=[];
+  async function removeFromStock(serial){
+    if(!serial||isCaja(serial))return;
+    const item=findStock(serial);
+    if(item){await sb.from('stock').delete().eq('id',item.id);changes.push(`• ${serial.toUpperCase()} eliminado del stock (entregado)`);}
+  }
+  async function setEstado(serial,newEstado){
+    if(!serial||isCaja(serial))return;
+    const item=findStock(serial);
+    if(item){const old=item.estado;await sb.from('stock').update({estado:newEstado}).eq('id',item.id);changes.push(`• ${serial.toUpperCase()}: ${old} → ${newEstado}`);}
+    else{await sb.from('stock').insert({categoria:'Notebook',modelo:'(ticket '+ticket.ritm+')',serial:serial.toUpperCase(),estado:newEstado,detalle:'',venc_garantia:'',notas:'Ingresado desde ticket '+ticket.ritm});changes.push(`• ${serial.toUpperCase()} agregado como ${newEstado}`);}
+  }
+  const t=ticket.tipo,e=ticket.envio_serial,d=ticket.dev_serial;
+  if(t==='Install')await removeFromStock(e);
+  else if(t==='Breeze'){await removeFromStock(e);await setEstado(d,'Pending disposal');}
+  else if(t==='Return'){if(d&&!isCaja(d))await setEstado(d,'Operativo');}
+  else if(t==='Repair'){await removeFromStock(e);if(d&&!isCaja(d))await setEstado(d,'Pending repair');}
+  else if(t==='Change class device'){await removeFromStock(e);if(d&&!isCaja(d))await setEstado(d,'Operativo');}
+  if(changes.length>0){
+    await logAction('Sync automático por ticket '+ticket.ritm,'stock',ticket.id,{cambios:changes});
+    await reloadStock();
+    showSyncToast(changes);
+  }
+}
+function showSyncToast(changes){
+  const log=document.getElementById('sync-log');
+  document.getElementById('sync-items').innerHTML=changes.map(c=>`<div class="sl-item">${esc(c)}</div>`).join('');
+  log.classList.add('show');clearTimeout(log._t);
+  log._t=setTimeout(()=>log.classList.remove('show'),5000);
+}
+
+// ── TICKETS ──
+function tBuildRespFilter(){} // responsable filter removed
+function tApply(){
+  const q=document.getElementById('t-search').value.toLowerCase();
+  const tipo=document.getElementById('t-tipo').value;
+  const est=document.getElementById('t-est').value;
+  const resp='';
+  tFiltered=tickets.filter(d=>{
+    const txt=[d.ritm,d.envio_serial,d.dev_serial,d.envio_tracking,d.dev_tracking,d.envio_responsable,d.dev_responsable,d.envio_direccion,d.comentarios].join(' ').toLowerCase();
+    return(!q||txt.includes(q))&&(!tipo||d.tipo===tipo)&&(!est||(d.estado===est)||(est==='Operativo'&&d.estado==='Operativa')||(est==='No operativo'&&d.estado==='No operativa'));
+  });
+  const _tsc=document.getElementById('t-sort-col')?.value||'envio_fecha';
+  const _tsd=parseInt(document.getElementById('t-sort-dir')?.value||'-1');
+  tFiltered.sort((a,b)=>{
+    const av=a[_tsc]||'', bv=b[_tsc]||'';
+    return av.localeCompare(bv)*_tsd;
+  });
+  tPage=1;tOpenCard=null;tRender();
+}
+function tRender(){
+  const start=(tPage-1)*PS,end=start+PS,rows=tFiltered.slice(start,end);
+  document.getElementById('t-ri').textContent=`${tFiltered.length} tickets`;
+  const container=document.getElementById('t-cards');
+  const emptyEl=document.getElementById('t-empty');
+  if(!rows.length){container.innerHTML='';emptyEl.style.display='block';tPg();tSummary();return;}
+  emptyEl.style.display='none';
+  container.innerHTML=rows.map(d=>{
+    const isProg=d.estado==='En progreso';
+    const resp=d.envio_responsable||d.dev_responsable||'—';
+    const fecha=d.envio_fecha||d.dev_fecha||'—';
+    const isOpen=tOpenCard===d.id;
+        const cardSerial=(d.envio_serial&&!isCaja(d.envio_serial))?d.envio_serial:(d.dev_serial&&!isCaja(d.dev_serial))?d.dev_serial:'';
+    return`<div class="card ${isProg?'prog':'done'}" id="tc-${d.id}" onclick="openTDetail('${d.id}')">
+      <div class="card-header">
+        <span class="card-header-label">${isProg?'En progreso':'Terminado'}</span>
+        ${isProg?'<div class="dot-pulse"></div>':'<span class="card-header-icon">✓</span>'}
+      </div>
+      <div class="card-top">
+        <div style="flex:1;min-width:0">
+          <div class="card-ritm">${esc(d.ritm)}</div>
+          <div class="card-meta">
+            <span class="badge ${TIPO_CLS[d.tipo]||'t-install'}">${esc(d.tipo)}</span>
+            <span class="card-resp">&nbsp;${esc(resp)}</span>
+          </div>
+        </div>
+        <div class="card-fecha">${esc(fecha)}</div>
+      </div>
+      ${cardSerial?`<div class="card-serial-row"><span class="card-serial-chip" onclick="event.stopPropagation();openV360('${cardSerial}')" style="cursor:pointer" title="Ver historial">${esc(cardSerial.toUpperCase())}</span></div>`:''}
+    </div>`;
+  }).join('');
+  tPg();tSummary();
+}
+function tBuildDetail(d){
+  const isRet=d.tipo==='Return';
+  const ce=canEdit();
+  const field=(k,v,full=false)=>v?`<div class="det-field${full?' full':''}"><div class="k">${k}</div><div class="v">${esc(v)}</div></div>`:'';
+  const serialF=(k,serial)=>{
+    if(!serial)return'';
+    if(isCaja(serial))return`<div class="det-field"><div class="k">${k}</div><div class="v"><span class="caja-chip">caja con insumos</span></div></div>`;
+    const f=findStock(serial);
+    const chip=f?`<div class="sc-chip sc-ok">✓ ${esc(f.modelo)} · ${esc(f.estado)}</div>`:`<div class="sc-chip sc-miss">No en stock</div>`;
+    return`<div class="det-field"><div class="k">${k}</div><div class="v"><span class="mono v360-serial-link" onclick="openV360('${esc(serial)}')" title="Ver historial completo">${esc(serial.toUpperCase())}</span>${chip}</div></div>`;
+  };
+  let html=`<div class="tipo-desc-card">${esc(TIPO_INFO[d.tipo]||'')}</div>`;
+  const hasEnvio=d.envio_tracking||d.envio_fecha||d.envio_responsable||d.envio_serial;
+  if(hasEnvio){html+=`<div class="det-section"><div class="det-title" style="color:var(--teal-t)">${isRet?'Envío — caja con insumos':'Envío'}</div><div class="det-grid">
+    ${field('Courier',d.envio_courier)}${field('Responsable',d.envio_responsable)}
+    ${field('Tracking',d.envio_tracking)}${field('Fecha',d.envio_fecha)}
+    ${field('Dirección',d.envio_direccion,true)}
+    ${isRet?`<div class="det-field full"><div class="k">Serial enviado</div><div class="v"><span class="caja-chip">caja con insumos</span></div></div>`:serialF('Serial enviado',d.envio_serial)}
+    ${!isRet?field('Test',d.envio_test):''}${!isRet?field('Condición',d.envio_condicion):''}
+    ${!isRet&&d.envio_trabajo?field('Trabajo',d.envio_trabajo,true):''}
+  </div></div>`;}
+  const hasDev=d.dev_tracking||d.dev_fecha||d.dev_responsable||d.dev_serial;
+  if(hasDev){html+=`<div class="det-section"><div class="det-title" style="color:var(--blue-t)">Devolución</div><div class="det-grid">
+    ${field('Responsable',d.dev_responsable)}${field('Dirección',d.dev_direccion)}
+    ${field('Tracking',d.dev_tracking)}${field('Fecha',d.dev_fecha)}
+    ${serialF('Serial recibido',d.dev_serial)}
+    ${field('Test',d.dev_test)}${field('Condición',d.dev_condicion)}
+    ${d.dev_trabajo?field('Trabajo',d.dev_trabajo,true):''}
+  </div></div>`;}
+  if(d.comentarios)html+=`<div class="coment-card">${esc(d.comentarios)}</div>`;
+  if(ce){html+=`<div class="card-actions">
+    <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openTForm('${d.id}')">✎ Editar</button>
+    ${isAdmin()?`<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();tDelete('${d.id}','${esc(d.ritm)}')" style="color:var(--red-t);border-color:var(--red-b)">Eliminar</button>`:''}
+    <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();tToggleEstado('${d.id}')" style="margin-left:auto">
+      ${d.estado==='En progreso'?'✓ Marcar terminado':'↩ Reabrir'}
+    </button>
+  </div>`;}
+  return html;
+}
+function tToggle(id,e){
+  if(e.target.tagName==='BUTTON')return;
+  tOpenCard=tOpenCard===id?null:id;tRender();
+  if(tOpenCard){setTimeout(()=>{const el=document.getElementById('tc-'+id);if(el)el.scrollIntoView({behavior:'smooth',block:'nearest'});},50);}
+}
+async function tToggleEstado(id){
+  if(!canEdit())return;
+  const t=tickets.find(x=>x.id===id);if(!t)return;
+  const wasProgreso=t.estado==='En progreso';
+  const newEstado=wasProgreso?'Terminado':'En progreso';
+  await sb.from('tickets').update({estado:newEstado}).eq('id',id);
+  await logAction(`${wasProgreso?'Cerró':'Reabrió'} ticket`,'ticket',id,{ritm:t.ritm,estado:newEstado});
+  if(wasProgreso)await syncStockFromTicket({...t,estado:'Terminado'});
+  await reloadTickets();
+}
+function tPg(){
+  const total=Math.ceil(tFiltered.length/PS),p=document.getElementById('t-pg');
+  p.innerHTML=total<=1?'':`<button class="pb" onclick="tChPage(${tPage-1})" ${tPage===1?'disabled':''}>← Anterior</button>
+    <span style="font-size:12px;color:var(--text2)">Pág. ${tPage}/${total}</span>
+    <button class="pb" onclick="tChPage(${tPage+1})" ${tPage===total?'disabled':''}>Siguiente →</button>`;
+}
+function tChPage(n){tPage=n;tOpenCard=null;tRender();window.scrollTo({top:0,behavior:'smooth'});}
+function tSummary(){
+  const ty={},es={};
+  tickets.forEach(d=>{ty[d.tipo]=(ty[d.tipo]||0)+1;es[d.estado]=(es[d.estado]||0)+1;});
+  const cols=[['En progreso','#639922'],['Terminado','#378add'],['Install','#1d9e75'],['Return','#378add'],['Repair','#d85a30'],['Change class device','#ba7517'],['Breeze','#7f77dd']];
+  document.getElementById('t-summary').innerHTML=cols.map(([n,c])=>`<div class="sc" style="border-top:3px solid ${c}" onclick="tQuickFilter('${n}')">
+    <div class="lbl">${n}</div><div class="val">${(ty[n]||0)+(es[n]||0)}</div><div class="sub">tickets</div>
+  </div>`).join('')+`<div class="sc" style="border-top:3px solid var(--teal-b)" onclick="tQuickFilter('')">
+    <div class="lbl">Total</div><div class="val">${tickets.length}</div><div class="sub">tickets</div>
+  </div>`;
+}
+function tQuickFilter(val){
+  const eVals=['En progreso','Terminado'];
+  if(eVals.includes(val)){document.getElementById('t-est').value=val;document.getElementById('t-tipo').value='';}
+  else if(val){document.getElementById('t-tipo').value=val;document.getElementById('t-est').value='';}
+  else{document.getElementById('t-tipo').value='';document.getElementById('t-est').value='';}
+  document.getElementById('t-search').value='';tApply();
+}
+function onTipoChange(){
+  const tipo=document.getElementById('tm-tipo').value.replace('&amp;','&');
+  document.getElementById('tm-tdesc').textContent=TIPO_INFO[tipo]||TIPO_INFO[tipo.replace('&amp;','&')]||'';
+  const isRet=tipo==='Return';
+  const isInst=tipo==='Install';
+  document.getElementById('tm-retnote').style.display=isRet?'block':'none';
+  document.getElementById('tm-eserial-grp').style.display=isRet?'none':'block';
+  document.getElementById('tm-etrabajo-grp').style.display=isRet?'none':'block';
+  document.getElementById('tm-dev-sec').style.display=isInst?'none':'block';
+}
+function checkSerial(inputId,hintId){
+  const val=document.getElementById(inputId).value.trim();
+  const hint=document.getElementById(hintId);
+  if(val.length<4){hint.innerHTML='';return;}
+  const f=findStock(val);
+  hint.innerHTML=f?`<div class="hint h-ok">En stock: ${esc(f.modelo)} · ${esc(f.estado)}</div>`:`<div class="hint h-miss">No encontrado en stock</div>`;
+}
+async function openTForm(id=null){
+  if(!canEdit())return;
+  tEditId=id;
+  let d=null;
+  if(id){
+    const{data:fresh}=await sb.from('tickets').select('*').eq('id',id).single();
+    d=fresh||tickets.find(x=>x.id===id)||null;
+  }
+  document.getElementById('t-mt').textContent=d?`Editar ${d.ritm}`:'Nuevo ticket';
+
+  // Helper for text inputs only
+  const fv=(el,v)=>{const e=document.getElementById(el);if(e)e.value=v||'';};
+
+  // Set tipo first by index - completely bypass HTML encoding
+  const _TIPOS=['Breeze','Install','Return','Repair','Change class device'];
+  const _tipo=d?d.tipo:'Install';
+  const _ts=document.getElementById('tm-tipo');
+  _ts.selectedIndex=Math.max(0,_TIPOS.indexOf(_tipo));
+
+  // Set estado
+  const _estOpts=['En progreso','Terminado'];
+  const _estSel=document.getElementById('tm-est');
+  _estSel.selectedIndex=Math.max(0,_estOpts.indexOf(d?d.estado:'En progreso'));
+
+  // Set all text fields
+  fv('tm-ritm',d?d.ritm:'');
+  fv('tm-ecourier',d?d.envio_courier:'');
+  fv('tm-eresp',d?d.envio_responsable:'');
+  fv('tm-edir',d?d.envio_direccion:'');
+  fv('tm-etrack',d?d.envio_tracking:'');
+  fv('tm-efecha',d?(d.envio_fecha||''):new Date().toISOString().split('T')[0]);
+  fv('tm-eserial',d?d.envio_serial:'');
+  fv('tm-etrabajo',d?d.envio_trabajo:'');
+  fv('tm-etest',d?d.envio_test:'');
+  fv('tm-econd',d?d.envio_condicion:'');
+  fv('tm-dresp',d?d.dev_responsable:'');
+  fv('tm-ddir',d?d.dev_direccion:'');
+  fv('tm-dtrack',d?d.dev_tracking:'');
+  fv('tm-dfecha',d?d.dev_fecha:'');
+  fv('tm-dserial',d?d.dev_serial:'');
+  fv('tm-dtrabajo',d?d.dev_trabajo:'');
+  fv('tm-dtest',d?d.dev_test:'');
+  fv('tm-dcond',d?d.dev_condicion:'');
+  fv('tm-comentarios',d?d.comentarios:'');
+
+  document.getElementById('tm-hint-e').innerHTML='';
+  document.getElementById('tm-hint-d').innerHTML='';
+
+  // Now trigger UI update based on tipo
+  onTipoChange();
+  document.getElementById('t-modal').classList.add('open');
+}
+function closeTForm(){document.getElementById('t-modal').classList.remove('open');}
+async function saveTItem(){
+  const g=id=>document.getElementById(id)?.value.trim()||'';
+  const tipo=g('tm-tipo').replace('&amp;','&');
+  if(!g('tm-ritm')){alert('El RITM es obligatorio.');return;}
+  const isRet=tipo==='Return';
+  const oldEstado=tEditId?tickets.find(x=>x.id===tEditId)?.estado:'';
+  const item={tipo,ritm:g('tm-ritm'),estado:g('tm-est'),
+    envio_courier:g('tm-ecourier'),envio_responsable:g('tm-eresp'),envio_direccion:g('tm-edir'),envio_tracking:g('tm-etrack'),
+    envio_fecha:g('tm-efecha'),envio_serial:isRet?'Se envia caja vacia de insumos para un Return':g('tm-eserial'),
+    envio_trabajo:isRet?'Se envia caja vacia de insumos para un Return':g('tm-etrabajo'),
+    envio_test:isRet?'':g('tm-etest'),envio_condicion:isRet?'':g('tm-econd'),
+    dev_responsable:g('tm-dresp'),dev_direccion:g('tm-ddir'),dev_tracking:g('tm-dtrack'),dev_fecha:g('tm-dfecha'),
+    dev_serial:g('tm-dserial'),dev_trabajo:g('tm-dtrabajo'),dev_test:g('tm-dtest'),dev_condicion:g('tm-dcond'),comentarios:g('tm-comentarios')};
+  let res;
+  if(tEditId){res=await sb.from('tickets').update(item).eq('id',tEditId);}
+  else{res=await sb.from('tickets').insert(item);}
+  if(res.error){alert('Error: '+res.error.message);return;}
+  await logAction(tEditId?'Editó ticket':'Creó ticket','ticket',tEditId||'nuevo',{ritm:item.ritm,tipo:item.tipo,estado:item.estado});
+  const nowTerminado=item.estado==='Terminado';
+  if((oldEstado==='En progreso'&&nowTerminado)||(tEditId===null&&nowTerminado)){
+    await syncStockFromTicket(item);
+    await createReturnFromTicket(item);
+  }
+  // Assign stock if ticket is En progreso and type needs it
+  if(item.estado==='En progreso' && ASSIGN_TYPES.includes(item.tipo)){
+    await assignStockToTicket(item);
+  }
+  // Unassign if ticket is now Terminado
+  if(nowTerminado){
+    await unassignStockFromTicket(item.ritm);
+  }
+  closeTForm();await reloadTickets();
+}
+async function tDelete(id,ritm){
+  if(!isAdmin())return;
+  if(!confirm(`¿Eliminar ${ritm}?`))return;
+  await sb.from('tickets').delete().eq('id',id);
+  await logAction('Eliminó ticket','ticket',id,{ritm});
+  await reloadTickets();
+}
+function tExport(){
+  const h=['RITM','Tipo','Estado','Courier','Responsable','Dirección','Tracking envío','Fecha envío','Serial enviado','Test envío','Resp. dev','Tracking dev','Fecha dev','Serial dev','Comentarios'];
+  const rows=tFiltered.map(d=>[d.ritm,d.tipo,d.estado,d.envio_courier,d.envio_responsable,d.envio_direccion,d.envio_tracking,d.envio_fecha,d.envio_serial,d.envio_test,d.dev_responsable,d.dev_tracking,d.dev_fecha,d.dev_serial,d.comentarios].map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(','));
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent('\uFEFF'+[h.join(','),...rows].join('\n'));
+  a.download='tickets.csv';a.click();
+}
+
+// ── HISTORIAL ──
+const ACCION_COLORS={'Agregó equipo':'#1d9e75','Editó equipo':'#ba7517','Eliminó equipo':'#e24b4a','Creó ticket':'#7f77dd','Editó ticket':'#ba7517','Eliminó ticket':'#e24b4a','Cerró ticket':'#1d9e75','Reabrió ticket':'#378add','Sync automático por ticket':'#888780','Creó usuario':'#7f77dd','Editó rol':'#ba7517'};
+function hBuildFilters(){
+  const names=[...new Set(historial.map(h=>h.usuario_nombre).filter(Boolean))].sort();
+  const sel=document.getElementById('h-user'),cur=sel.value;
+  sel.innerHTML='<option value="">Todos los usuarios</option>'+names.map(n=>`<option${n===cur?' selected':''}>${n}</option>`).join('');
+}
+function hApply(){
+  const tabla=document.getElementById('h-tabla').value;
+  const user=document.getElementById('h-user').value;
+  const _hsd=parseInt(document.getElementById('h-sort-dir')?.value||'-1');
+  hFiltered=historial.filter(h=>{
+    const mt=!tabla||h.tabla===tabla;
+    const mu=!user||h.usuario_nombre===user;
+    return mt&&mu;
+  });
+  hPage=1;hRender();
+}
+function hRender(){
+  hFiltered.sort((a,b)=>{
+    const da=new Date(a.created_at||0), db=new Date(b.created_at||0);
+    const _hsd2=parseInt(document.getElementById('h-sort-dir')?.value||'-1');
+    return (db-da)*_hsd2;
+  });
+  const start=(hPage-1)*PS,end=start+PS,rows=hFiltered.slice(start,end);
+  document.getElementById('h-ri').textContent=`${hFiltered.length} registros`;
+  const list=document.getElementById('h-list');
+  const emptyEl=document.getElementById('h-empty');
+  if(!rows.length){list.innerHTML='';emptyEl.style.display='block';hPg();return;}
+  emptyEl.style.display='none';
+  const tablaLabel={'stock':'Stock','ticket':'Ticket','usuario':'Usuario'};
+  const tablaCls={'stock':'hb-stock','ticket':'hb-ticket','usuario':'hb-usuario'};
+  list.innerHTML=rows.map(h=>{
+    const color=ACCION_COLORS[h.accion]||'#888780';
+    const initials=(h.usuario_nombre||'?').slice(0,2).toUpperCase();
+    let detalleHtml='';
+    if(h.detalle){
+      const d=h.detalle;
+      if(d.cambios) detalleHtml=d.cambios.map(c=>`<div>${esc(c)}</div>`).join('');
+      else if(d.ritm) detalleHtml=`RITM: ${esc(d.ritm)} · ${esc(d.tipo||'')} · ${esc(d.estado||'')}`;
+      else if(d.serial||d.modelo) detalleHtml=`${esc(d.modelo||'')} ${esc(d.serial||'')} → ${esc(d.estado||'')}`;
+    }
+    return`<div class="hist-item">
+      <div class="hist-avatar" style="background:${color}22;color:${color}">${initials}</div>
+      <div class="hist-body">
+        <div class="hist-accion">
+          <span class="hist-badge ${tablaCls[h.tabla]||'hb-stock'}">${tablaLabel[h.tabla]||h.tabla}</span>
+          ${esc(h.accion)}
+        </div>
+        <div class="hist-meta">${esc(h.usuario_nombre||'Sistema')} · ${timeAgo(h.created_at)}</div>
+        ${detalleHtml?`<div class="hist-detalle">${detalleHtml}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  hPg();
+}
+function hPg(){
+  const total=Math.ceil(hFiltered.length/PS),p=document.getElementById('h-pg');
+  p.innerHTML=total<=1?'':`<button class="pb" onclick="hChPage(${hPage-1})" ${hPage===1?'disabled':''}>← Anterior</button>
+    <span style="font-size:12px;color:var(--text2)">Pág. ${hPage}/${total}</span>
+    <button class="pb" onclick="hChPage(${hPage+1})" ${hPage===total?'disabled':''}>Siguiente →</button>`;
+}
+function hChPage(n){hPage=n;hRender();}
+
+// ── USUARIOS ──
+function renderUsuarios(){
+  const ROL_LABELS={'admin':'Admin','editor':'Editor','viewer':'Viewer'};
+  const list=document.getElementById('u-list');
+  if(!usuarios.length){list.innerHTML='<div class="empty">Sin usuarios.</div>';return;}
+  list.innerHTML=usuarios.map(u=>`<div class="user-row">
+    <div class="user-avatar" style="background:${ROL_COLORS[u.rol]||'#888'}22;color:${ROL_COLORS[u.rol]||'#888'}">${(u.nombre||'?').slice(0,2).toUpperCase()}</div>
+    <div class="user-info">
+      <div class="user-name">${esc(u.nombre)}${u.id===currentUser.id?' <span style="font-size:11px;color:var(--text3)">(vos)</span>':''}</div>
+      <div class="user-email" id="email-${u.id}">Cargando...</div>
+    </div>
+    <span class="rol-badge rol-${u.rol}">${ROL_LABELS[u.rol]||u.rol}</span>
+    ${!u.activo?'<span class="inactive-chip">Inactivo</span>':''}
+    ${u.id!==currentUser.id?`<select onchange="changeRol('${u.id}',this.value)" style="font-size:12px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text)">
+      <option value="viewer"${u.rol==='viewer'?' selected':''}>Viewer</option>
+      <option value="editor"${u.rol==='editor'?' selected':''}>Editor</option>
+      <option value="admin"${u.rol==='admin'?' selected':''}>Admin</option>
+    </select>`:''}
+  </div>`).join('');
+}
+async function changeRol(userId,newRol){
+  const u=usuarios.find(x=>x.id===userId);
+  await sb.from('perfiles').update({rol:newRol}).eq('id',userId);
+  await logAction('Editó rol','usuario',userId,{nombre:u?.nombre,rol_anterior:u?.rol,rol_nuevo:newRol});
+  await reloadUsuarios();
+}
+let uEditId=null;
+function openUForm(id=null){
+  uEditId=id;
+  document.getElementById('u-mt').textContent='Crear usuario';
+  document.getElementById('um-nombre').value='';
+  document.getElementById('um-email').value='';
+  document.getElementById('um-pass').value='';
+  document.getElementById('um-rol').value='viewer';
+  document.getElementById('um-err').style.display='none';
+  document.getElementById('u-modal').classList.add('open');
+}
+function closeUForm(){document.getElementById('u-modal').classList.remove('open');}
+async function saveUItem(){
+  const nombre=document.getElementById('um-nombre').value.trim();
+  const email=document.getElementById('um-email').value.trim();
+  const pass=document.getElementById('um-pass').value.trim();
+  const rol=document.getElementById('um-rol').value;
+  const errEl=document.getElementById('um-err');
+  errEl.style.display='none';
+  if(!nombre||!email||!pass){errEl.textContent='Completá todos los campos.';errEl.style.display='block';return;}
+  if(pass.length<6){errEl.textContent='La contraseña debe tener al menos 6 caracteres.';errEl.style.display='block';return;}
+  const btn=document.getElementById('um-save-btn');
+  btn.disabled=true;btn.textContent='Creando...';
+  const {data,error}=await sb.auth.admin?
+    {error:{message:'Use Supabase dashboard to create users — admin API requires service role key'}}:
+    await sb.auth.signUp({email,password:pass,options:{data:{nombre,rol}}});
+  // Since we only have anon key, we use a workaround: create via signup
+  const {data:sd,error:se}=await sb.auth.signUp({
+    email,password:pass,
+    options:{data:{nombre,rol},emailRedirectTo:window.location.href}
+  });
+  btn.disabled=false;btn.textContent='Crear usuario';
+  if(se){errEl.textContent=se.message;errEl.style.display='block';return;}
+  await logAction('Creó usuario','usuario',sd?.user?.id||'nuevo',{nombre,email,rol});
+  closeUForm();
+  showSyncToast([`• Usuario ${nombre} (${rol}) creado. Debe confirmar su email.`]);
+  await reloadUsuarios();
+}
+
+['s-modal','t-modal','u-modal','r-modal','g-modal','td-modal'].forEach(id=>{
+  document.getElementById(id).addEventListener('click',e=>{if(e.target===e.currentTarget)document.getElementById(id).classList.remove('open');});
+});
+
+
+// ════════ RETURNS ════════
+let returnsData=[], rFiltered=[], rPage=1, rEditId=null;
+const RDATA=[{"marca":"HP","equipo":"Notebook","modelo":"HP EliteBook 850 G8","serial":"5CG2190QKN","condicion":"USADA","fecha_llegada":"2025-11-25","comentarios":"repair","ritm":"RITM3311388","ritm_notas":"","semana":"48"},{"marca":"HP","equipo":"Notebook","modelo":"HP EliteBook 840 G8","serial":"5CG2107WY0","condicion":"USADA","fecha_llegada":"2025-11-28","comentarios":"return(NO TRAJO CARGADOR)","ritm":"RITM3317355","ritm_notas":"","semana":"48"},{"marca":"HP","equipo":"Notebook","modelo":"HP EliteBook 850 G8","serial":"5CG2190QQ4","condicion":"USADA","fecha_llegada":"2025-11-28","comentarios":"repair(Con cargador)","ritm":"RITM3260044","ritm_notas":"","semana":"48"},{"marca":"HP","equipo":"Notebook","modelo":"HP EliteBook 850 G8","serial":"5CG2190QP2","condicion":"USADA","fecha_llegada":"2025-11-28","comentarios":"repair(Trajo cargador)","ritm":"RITM3296608","ritm_notas":"","semana":"48"},{"marca":"HP","equipo":"Notebook","modelo":"HP EliteBook 850 G8","serial":"5CG2236MW8","condicion":"USADA","fecha_llegada":"2025-11-28","comentarios":"return(con cargador)","ritm":"RITM3304090","ritm_notas":"","semana":"48"},{"marca":"HP","equipo":"Notebook","modelo":"HP ProBook 640 G8","serial":"5CD1509XXK","condicion":"USADA","fecha_llegada":"2025-11-28","comentarios":"return(con cargador)","ritm":"RITM3304202","ritm_notas":"","semana":"48"},{"marca":"HP","equipo":"Notebook","modelo":"HP EliteBook 850 G8","serial":"5CG20737MB","condicion":"USADA","fecha_llegada":"2025-11-28","comentarios":"return(con cargador)","ritm":"RITM3304180","ritm_notas":"","semana":"48"},{"marca":"HP","equipo":"Notebook","modelo":"HP EliteBook 650 G10","serial":"5CD420KCTW","condicion":"USADA","fecha_llegada":"2025-12-03","comentarios":"return(con cargador)","ritm":"RITM3257651","ritm_notas":"","semana":"49"},{"marca":"HP","equipo":"Notebook","modelo":"HP EliteBook 650 G10","serial":"5CD420KCWG","condicion":"USADA","fecha_llegada":"2025-12-26","comentarios":"return","ritm":"RITM3350995","ritm_notas":"","semana":"51"},{"marca":"HP","equipo":"Notebook","modelo":"HP Elite Mini 800 G6 Desktop","serial":"8CC2300JQ4","condicion":"USADA","fecha_llegada":"2025-12-26","comentarios":"device class change","ritm":"RITM3275990","ritm_notas":"","semana":"51"},{"marca":"HP","equipo":"Notebook","modelo":"HP EliteBook 840 G8","serial":"5CG20737JN","condicion":"USADA","fecha_llegada":"2025-12-30","comentarios":"repair (Trajo cargador)","ritm":"RITM3388224","ritm_notas":"","semana":"52"},{"marca":"HP","equipo":"Notebook","modelo":"HP EliteBook 850 G8","serial":"5CG2190QNB","condicion":"USADA","fecha_llegada":"2025-12-30","comentarios":"repair (Trajo cargador)","ritm":"RITM3386867","ritm_notas":"","semana":"52"},{"marca":"HP","equipo":"Notebook","modelo":"HP EliteBook 650 G10","serial":"5CD420KCTT","condicion":"USADA","fecha_llegada":"2025-01-08","comentarios":"repair (Trajo cargador)","ritm":"RITM3420264","ritm_notas":"","semana":"2"},{"marca":"HP","equipo":"Mini  Desktop","modelo":"HP Elite Mini 800 G6 Desktop","serial":"8CC2300JR5","condicion":"USADA","fecha_llegada":"2026-01-15","comentarios":"repair (Trajo cargador)","ritm":"RITM3392928","ritm_notas":"","semana":"3"},{"marca":"HP","equipo":"Mini  Desktop","modelo":"HP Elite Mini 800 G6 Desktop","serial":"8CC2300JQG","condicion":"USADA","fecha_llegada":"2026-01-22","comentarios":"repair (Trajo cargador)","ritm":"RITM3423428","ritm_notas":"","semana":"4"},{"marca":"HP","equipo":"Notebook","modelo":"HP EliteBook 840 G8","serial":"5CG20736V0","condicion":"USADA","fecha_llegada":"2026-01-23","comentarios":"return(con cargador)","ritm":"RITM3236361","ritm_notas":"","semana":"5"},{"marca":"HP","equipo":"notebook","modelo":"HP EliteBook 840 G8","serial":"5CG2107XK9","condicion":"usada","fecha_llegada":"2026-01-23","comentarios":"","ritm":"RITM3353728","ritm_notas":"Enciende, solo presenta un golpe en carcasa base","semana":"5"},{"marca":"HP","equipo":"notebook","modelo":"HP EliteBook 850 G8","serial":"5CG2190QNP","condicion":"usada","fecha_llegada":"2026-01-23","comentarios":"ingreso(con cargador)","ritm":"RITM3454079","ritm_notas":"Teclas S suelta y golpe en Bisagra derecha, enciende","semana":"5"},{"marca":"HP","equipo":"notebook","modelo":"HP EliteBook 840 G8","serial":"5CG20736V0","condicion":"usada","fecha_llegada":"2026-01-23","comentarios":"ingreso(con cargador)","ritm":"RITM3236361","ritm_notas":"solo un pequeño golpe pero en condiciones","semana":"5"},{"marca":"HP","equipo":"notebook","modelo":"HP EliteBook 850 G7","serial":"5CG112B1D1","condicion":"usada","fecha_llegada":"2026-01-23","comentarios":"ingreso(con cargador)","ritm":"RITM3350769","ritm_notas":"","semana":"5"},{"marca":"HP","equipo":"notebook","modelo":"HP EliteBook 840 G8","serial":"5CG1521HPS","condicion":"usada","fecha_llegada":"2026-01-23","comentarios":"ingreso(con cargador)","ritm":"RITM3402656","ritm_notas":"","semana":"5"},{"marca":"HP","equipo":"notebook","modelo":"HP ProBook 640 G8","serial":"5CD1509XXH","condicion":"usada","fecha_llegada":"2026-01-23","comentarios":"ingreso(con cargador)","ritm":"RITM3341402","ritm_notas":"","semana":"5"},{"marca":"HP","equipo":"notebook","modelo":"HP EliteBook 840 G8","serial":"5CG20736NC","condicion":"usada","fecha_llegada":"2026-01-23","comentarios":"ingreso(con cargador)","ritm":"RITM3339198","ritm_notas":"","semana":"5"},{"marca":"HP","equipo":"notebook","modelo":"HP EliteBook 840 G8","serial":"5CG2107XK9","condicion":"usada","fecha_llegada":"2026-01-23","comentarios":"ingreso(con cargador)","ritm":"RITM3353728","ritm_notas":"pending disposal, sin garantia y teclado roto","semana":"5"},{"marca":"HP","equipo":"notebook","modelo":"HP EliteBook 630 G10","serial":"5CD420KCYS","condicion":"usada","fecha_llegada":"2026-01-23","comentarios":"ingreso(con cargador)","ritm":"RITM3453296","ritm_notas":"pending repair, pantalla rota","semana":"5"},{"marca":"HP","equipo":"notebook","modelo":"HP EliteBook 850 G8","serial":"5CG2236MW8","condicion":"usada","fecha_llegada":"2026-01-30","comentarios":"ingreso(con cargador)","ritm":"RITM3430659","ritm_notas":"","semana":"5"},{"marca":"HP","equipo":"Mini  Desktop","modelo":"HP Elite Mini 800 G9 Desktop","serial":"8CC4314NZM","condicion":"usada","fecha_llegada":"2026-01-30","comentarios":"ingreso(con cargador)","ritm":"RITM3405794","ritm_notas":"","semana":"5"},{"marca":"HP","equipo":"Mini  Desktop","modelo":"HP EliteDesk 800 G6 Desktop","serial":"8CC2300JRC","condicion":"usada","fecha_llegada":"2026-01-30","comentarios":"ingreso(con cargador)","ritm":"RITM3405809","ritm_notas":"pending repair","semana":"5"},{"marca":"HP","equipo":"notebook","modelo":"HP EliteBook 840 G8","serial":"5CG2107XG6","condicion":"usada","fecha_llegada":"2026-01-30","comentarios":"ingreso(con cargador)","ritm":"RITM3360321","ritm_notas":"","semana":"5"},{"marca":"HP","equipo":"Mini  Desktop","modelo":"HP Elite Mini 800 G6 Desktop","serial":"8CC2300JQ0","condicion":"usada","fecha_llegada":"2026-02-05","comentarios":"ingreso(con cargador)","ritm":"RITM3395918","ritm_notas":"","semana":"6"},{"marca":"HP","equipo":"notebok","modelo":"HP EliteBook 850 G8","serial":"5CG2190QPZ","condicion":"usada","fecha_llegada":"2026-02-05","comentarios":"ingreso(con cargador)","ritm":"RITM3402861","ritm_notas":"","semana":""},{"marca":"HP","equipo":"Mini  Desktop","modelo":"HP EliteDesk 800 G6 Desktop","serial":"8CC2300JPG","condicion":"usada","fecha_llegada":"2026-02-11","comentarios":"ingreso(con cargador)","ritm":"RITM3457795","ritm_notas":"sin garantia, no enciende","semana":""},{"marca":"HP","equipo":"notebook","modelo":"HP EliteBook 840 G8","serial":"5CG20736MT","condicion":"usada","fecha_llegada":"2026-03-04","comentarios":"ingreso(con cargador)","ritm":"RITM3431285","ritm_notas":"sin garantia","semana":""},{"marca":"HP","equipo":"notebook","modelo":"HP EliteBook 850 G8","serial":"5cg2190QKc","condicion":"usada","fecha_llegada":"2026-03-04","comentarios":"ingreso(con 2 cargador)","ritm":"RITM3471571","ritm_notas":"","semana":""},{"marca":"HP","equipo":"notebook","modelo":"HP EliteBook 840 G8","serial":"5CG20736MB","condicion":"usada","fecha_llegada":"2026-03-04","comentarios":"ingreso(con cargador)","ritm":"RITM3490090","ritm_notas":"","semana":""},{"marca":"HP","equipo":"notebook","modelo":"HP EliteBook 650 G10","serial":"5CD420KCWP","condicion":"usada","fecha_llegada":"2026-03-04","comentarios":"ingreso(con cargador)","ritm":"RITM3473807","ritm_notas":"no enciende mojada","semana":""},{"marca":"HP","equipo":"notebook","modelo":"HP EliteBook 650 G10","serial":"5CD420KCTM","condicion":"usada","fecha_llegada":"2026-03-04","comentarios":"ingreso(con cargador)","ritm":"RITM3490092","ritm_notas":"","semana":""},{"marca":"HP","equipo":"notebook","modelo":"HP EliteBook 850 G8","serial":"5CG2236MWC","condicion":"usada","fecha_llegada":"2026-03-02","comentarios":"ingreso(con cargador)","ritm":"RITM3493062","ritm_notas":"Pantalla dañada","semana":"2"},{"marca":"HP","equipo":"notebook","modelo":"HP ProBook 640 G8","serial":"5CD1509XXW","condicion":"usada","fecha_llegada":"2026-03-02","comentarios":"ingreso(con cargador)","ritm":"RITM3490046","ritm_notas":"","semana":"2"},{"marca":"HP","equipo":"notebook","modelo":"HP EliteBook 850 G8","serial":"5CG2190QQL","condicion":"usada","fecha_llegada":"2026-03-02","comentarios":"ingreso(con cargador)","ritm":"RITM3388139","ritm_notas":"","semana":"2"},{"marca":"HP","equipo":"notebook","modelo":"HP EliteBook 850 G8","serial":"5CG2190QLY","condicion":"usada","fecha_llegada":"2026-03-10","comentarios":"ingreso(con cargador)","ritm":"RITM3558206","ritm_notas":"No enciende con golpes","semana":"2"},{"marca":"HP","equipo":"notebook","modelo":"HP EliteBook 840 G8","serial":"5CG2190QN6","condicion":"usada","fecha_llegada":"2026-03-10","comentarios":"ingreso(con cargador)","ritm":"RITM3350972","ritm_notas":"","semana":"2"},{"marca":"HP","equipo":"notebook","modelo":"HP EliteBook 840 G8","serial":"5CG2107X37","condicion":"usada","fecha_llegada":"2026-03-10","comentarios":"ingreso(con cargador)","ritm":"RITM3451128","ritm_notas":"","semana":"2"},{"marca":"HP","equipo":"","modelo":"HP EliteBook 850 G8","serial":"5cg2190qqw","condicion":"","fecha_llegada":"2026-03-19","comentarios":"ingreso(con cargador)","ritm":"RITM3538525","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"HP EliteBook 850 G8","serial":"5CG2190QLZ","condicion":"","fecha_llegada":"2026-03-19","comentarios":"ingreso(con cargador)","ritm":"RITM3511153","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"HP ProBook 640 G8","serial":"5CD1509XXY","condicion":"","fecha_llegada":"2026-03-19","comentarios":"ingreso(con cargador)","ritm":"RITM3548252","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"HP EliteBook 850 G8","serial":"5CG2190QPF","condicion":"","fecha_llegada":"2026-03-19","comentarios":"ingreso(con cargador)","ritm":"RITM3548597","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"HP EliteBook 840 G8","serial":"5CG2107WQQ","condicion":"","fecha_llegada":"2026-03-19","comentarios":"ingreso(con cargador)","ritm":"RITM3476324","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""},{"marca":"HP","equipo":"","modelo":"","serial":"","condicion":"","fecha_llegada":"","comentarios":"","ritm":"","ritm_notas":"","semana":""}];
+
+async function reloadReturns(){
+  const{data}=await sb.from('returns').select('*').order('fecha_llegada',{ascending:false});
+  if(data)returnsData=data;
+  else returnsData=RDATA.slice();
+  rBuildFilters();rApply();
+}
+
+function getTipoReturn(comentarios){
+  if(!comentarios)return'other';
+  const c=comentarios.toLowerCase();
+  if(c.includes('repair'))return'repair';
+  if(c.includes('return'))return'return';
+  if(c.includes('ingreso'))return'ingreso';
+  if(c.includes('device')||c.includes('class'))return'device';
+  return'other';
+}
+const TIPO_LABEL={'repair':'Repair','return':'Return','ingreso':'Ingreso','device':'Device class change','other':'Otro'};
+const TIPO_CLS_R={'repair':'c-repair','return':'c-return','ingreso':'c-ingreso','device':'c-device','other':'c-other'};
+
+function rBuildFilters(){
+  const semanas=[...new Set(returnsData.map(d=>d.semana).filter(Boolean))].sort((a,b)=>Number(a)-Number(b));
+  const sel=document.getElementById('r-semana'),cur=sel.value;
+  sel.innerHTML='<option value="">Todas las semanas</option>'+semanas.map(s=>`<option${s===cur?' selected':''}>Semana ${s}</option>`).join('');
+}
+
+function rApply(){
+  const q=document.getElementById('r-search').value.toLowerCase();
+  const tipo=document.getElementById('r-tipo').value;
+  const equipo=document.getElementById('r-equipo').value;
+  const semana=document.getElementById('r-semana').value.replace('Semana ','');
+  rFiltered=returnsData.filter(d=>{
+    const txt=((d.modelo||'')+(d.serial||'')+(d.ritm||'')+(d.comentarios||'')+(d.ritm_notas||'')).toLowerCase();
+    const mt=!tipo||getTipoReturn(d.comentarios)===tipo;
+    const me=!equipo||((equipo==='Mini'&&(d.equipo||'').toLowerCase().includes('mini'))||(equipo==='Notebook'&&(d.equipo||'').toLowerCase().includes('notebook')));
+    const ms=!semana||d.semana===semana;
+    return(!q||txt.includes(q))&&mt&&me&&ms;
+  });
+  const _rsc=document.getElementById('r-sort-col')?.value||'fecha_llegada';
+  const _rsd=parseInt(document.getElementById('r-sort-dir')?.value||'-1');
+  rFiltered.sort((a,b)=>((a[_rsc]||'').localeCompare(b[_rsc]||''))*_rsd);
+  rPage=1;rRender();
+}
+
+function rRender(){
+  const start=(rPage-1)*PS,end=start+PS,rows=rFiltered.slice(start,end);
+  document.getElementById('r-ri').textContent=`${rFiltered.length} returns`;
+  const container=document.getElementById('r-cards');
+  const emptyEl=document.getElementById('r-empty');
+  if(!rows.length){container.innerHTML='';emptyEl.style.display='block';rPg();rSummary();return;}
+  emptyEl.style.display='none';
+  const ce=canEdit();
+  container.innerHTML=rows.map(d=>{
+    const tipo=getTipoReturn(d.comentarios);
+    const stockItem=findStock(d.serial);
+    return`<div class="ret-card">
+      <div class="ret-header">
+        <div style="flex:1;min-width:0">
+          <div class="ret-modelo">${esc(d.modelo)}</div>
+          <div class="ret-serial v360-serial-link" onclick="openV360('${esc(d.serial||'')}')" title="Ver historial completo">${esc((d.serial||'').toUpperCase())}</div>
+          <div class="ret-badges">
+            <span class="badge ${TIPO_CLS_R[tipo]}">${TIPO_LABEL[tipo]}</span>
+            ${d.equipo?`<span class="badge b-nb">${esc(d.equipo)}</span>`:''}
+            ${stockItem?`<span class="badge e-op">En stock · ${esc(stockItem.estado)}</span>`:'<span class="badge e-nop">No en stock</span>'}
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;font-size:12px;color:var(--text3)">
+          ${d.fecha_llegada?`<div>${esc(d.fecha_llegada)}</div>`:''}
+          ${d.semana?`<div>Semana ${esc(d.semana)}</div>`:''}
+        </div>
+      </div>
+      <div class="ret-meta">
+        ${d.ritm?`<div class="ret-field"><div class="k">RITM</div><div class="v" style="font-family:monospace">${esc(d.ritm)}</div></div>`:''}
+        ${d.condicion?`<div class="ret-field"><div class="k">Condición</div><div class="v">${esc(d.condicion)}</div></div>`:''}
+        ${d.comentarios?`<div class="ret-field full"><div class="k">Comentarios</div><div class="v">${esc(d.comentarios)}</div></div>`:''}
+        ${d.ritm_notas?`<div class="ret-field full"><div class="k">Notas</div><div class="v">${esc(d.ritm_notas)}</div></div>`:''}
+      </div>
+      ${ce?`<div class="ret-actions">
+        <button class="btn btn-outline btn-sm" onclick="openRForm('${d.id}')">✎ Editar</button>
+        ${isAdmin()?`<button class="btn btn-outline btn-sm" onclick="rDelete('${d.id}','${esc(d.serial)}')" style="color:var(--red-t);border-color:var(--red-b)">Eliminar</button>`:''}</div>`:''}
+    </div>`;
+  }).join('');
+  rPg();rSummary();
+}
+
+function rSummary(){
+  const tipos={};
+  returnsData.forEach(d=>{const t=getTipoReturn(d.comentarios);tipos[t]=(tipos[t]||0)+1;});
+  const cols=[['repair','Repair','#ba7517'],['return','Return','#378add'],['ingreso','Ingreso','#1d9e75'],['device','Device class change','#7f77dd']];
+  document.getElementById('r-summary').innerHTML=
+    cols.map(([k,n,c])=>`<div class="sc" style="border-top:3px solid ${c}" onclick="document.getElementById('r-tipo').value='${k}';rApply()">
+      <div class="lbl">${n}</div><div class="val">${tipos[k]||0}</div><div class="sub">equipos</div>
+    </div>`).join('')+
+    `<div class="sc" style="border-top:3px solid var(--teal-b)" onclick="document.getElementById('r-tipo').value='';rApply()">
+      <div class="lbl">Total</div><div class="val">${returnsData.length}</div><div class="sub">returns</div>
+    </div>`;
+}
+
+function rPg(){
+  const total=Math.ceil(rFiltered.length/PS),p=document.getElementById('r-pg');
+  p.innerHTML=total<=1?'':`<button class="pb" onclick="rChPage(${rPage-1})" ${rPage===1?'disabled':''}>← Anterior</button>
+    <span style="font-size:12px;color:var(--text2)">Pág. ${rPage}/${total}</span>
+    <button class="pb" onclick="rChPage(${rPage+1})" ${rPage===total?'disabled':''}>Siguiente →</button>`;
+}
+function rChPage(n){rPage=n;rRender();window.scrollTo({top:0,behavior:'smooth'});}
+
+async function openRForm(id=null){
+  if(!canEdit())return;
+  rEditId=id;
+  const d=id?returnsData.find(x=>x.id===id):null;
+  document.getElementById('r-mt').textContent=d?'Editar return':'Agregar return';
+  const f=(el,v)=>document.getElementById(el).value=v||'';
+  f('rm-marca',d?d.marca:'HP');f('rm-equipo',d?d.equipo:'Notebook');
+  f('rm-modelo',d?d.modelo:'');f('rm-serial',d?d.serial:'');
+  f('rm-condicion',d?d.condicion:'USADA');f('rm-fecha',d?d.fecha_llegada:'');
+  f('rm-ritm',d?d.ritm:'');f('rm-comentarios',d?d.comentarios:'');
+  f('rm-ritm-notas',d?d.ritm_notas:'');f('rm-semana',d?d.semana:'');
+  document.getElementById('r-modal').classList.add('open');
+}
+function closeRForm(){document.getElementById('r-modal').classList.remove('open');}
+async function saveRItem(){
+  const g=id=>document.getElementById(id).value.trim();
+  if(!g('rm-modelo')||!g('rm-serial')){alert('Modelo y serial son obligatorios.');return;}
+  const item={marca:g('rm-marca'),equipo:g('rm-equipo'),modelo:g('rm-modelo'),serial:g('rm-serial'),condicion:g('rm-condicion'),fecha_llegada:g('rm-fecha'),ritm:g('rm-ritm'),comentarios:g('rm-comentarios'),ritm_notas:g('rm-ritm-notas'),semana:g('rm-semana')};
+  let res;
+  if(rEditId){res=await sb.from('returns').update(item).eq('id',rEditId);}
+  else{res=await sb.from('returns').insert(item);}
+  if(res.error){alert('Error: '+res.error.message);return;}
+  await logAction(rEditId?'Editó return':'Agregó return','stock',rEditId||'nuevo',{serial:item.serial,modelo:item.modelo,ritm:item.ritm});
+  // If modelo was provided, update stock item if modelo was empty
+  if(item.modelo&&item.serial){
+    const si=findStock(item.serial);
+    if(si&&(!si.modelo||si.modelo.includes('ticket'))){
+      await sb.from('stock').update({modelo:item.modelo,categoria:item.equipo==='Mini Desktop'?'Mini PC':'Notebook'}).eq('id',si.id);
+      await reloadStock();
+    }
+  }
+  closeRForm();await reloadReturns();
+}
+async function rDelete(id,serial){
+  if(!isAdmin())return;
+  if(!confirm(`¿Eliminar return ${serial}?`))return;
+  await sb.from('returns').delete().eq('id',id);
+  await logAction('Eliminó return','stock',id,{serial});
+  await reloadReturns();
+}
+function rExport(){
+  const h=['Marca','Equipo','Modelo','Serial','Condición','Fecha llegada','Comentarios','RITM','Notas RITM','Semana'];
+  const rows=rFiltered.map(d=>[d.marca,d.equipo,d.modelo,d.serial,d.condicion,d.fecha_llegada,d.comentarios,d.ritm,d.ritm_notas,d.semana].map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(','));
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent('\uFEFF'+[h.join(','),...rows].join('\n'));
+  a.download='returns.csv';a.click();
+}
+
+
+// ════════ GUÍAS COURIER ════════
+let guiasData=[], gFiltered=[], gPage=1, gEditId=null, gSortCol='fecha', gSortDir=-1;
+const GDATA=[{"tipo":"Install","tipo_raw":"Envio(install)","fecha":"2025-12-01","ritm":"RITM3339123","guia_envio":"DHL 5770557914","guia_regreso":""},{"tipo":"Install","tipo_raw":"Envio (install)","fecha":"2025-12-02","ritm":"RITM3347538","guia_envio":"DHL 8275047410","guia_regreso":""},{"tipo":"Install","tipo_raw":"Envio (install)","fecha":"2025-12-02","ritm":"RITM3343989","guia_envio":"DHL 8275159351","guia_regreso":""},{"tipo":"Return","tipo_raw":"Devolucion (return)","fecha":"2025-12-02","ritm":"RITM3350769","guia_envio":"DHL 14 6133 3425","guia_regreso":"DHL 30 9261 8550"},{"tipo":"Install","tipo_raw":"Envio (install)","fecha":"2025-12-02","ritm":"RITM3347533","guia_envio":"DHL 1461282524","guia_regreso":""},{"tipo":"Repair","tipo_raw":"Envio y devolcion(Repair)","fecha":"2025-12-03","ritm":"RITM3353728","guia_envio":"DHL 18 8837 4600","guia_regreso":"DHL 30 9262 0672"},{"tipo":"Return","tipo_raw":"Envio y devolucion (return)","fecha":"2025-12-03","ritm":"RITM3350995","guia_envio":"DHL 52 7487 3446","guia_regreso":"DHL 72 4885 4620"},{"tipo":"Return","tipo_raw":"Envio y devolucion(return)","fecha":"2025-12-03","ritm":"RITM3350972","guia_envio":"DHL 14 6140 3215","guia_regreso":"DHL 30 9261 8701"},{"tipo":"Repair","tipo_raw":"Envio y devolcion(Repair)","fecha":"2025-12-09","ritm":"RITM3360321","guia_envio":"DHL 8401149411","guia_regreso":"DHL 3024788395"},{"tipo":"Repair","tipo_raw":"Envio y devolcion(Repair)","fecha":"2025-12-09","ritm":"RITM3360271","guia_envio":"DHL 15 6051 3323","guia_regreso":"DHL 94 9107 8166"},{"tipo":"Install","tipo_raw":"Envio(install)","fecha":"2025-12-09","ritm":"RITM3360328","guia_envio":"DHL  91 5300 3731","guia_regreso":""},{"tipo":"Install","tipo_raw":"Envio(install)","fecha":"2025-12-10","ritm":"RITM3343986","guia_envio":"DHL 4811315795","guia_regreso":""},{"tipo":"Install","tipo_raw":"Envio(install)","fecha":"2025-12-10","ritm":"RITM3366820","guia_envio":"DHL 4015159956","guia_regreso":""},{"tipo":"Install","tipo_raw":"Envio(install)","fecha":"2025-12-10","ritm":"RITM3367908","guia_envio":"DHL 7206071095","guia_regreso":""},{"tipo":"Install","tipo_raw":"Envio(install)","fecha":"2025-12-10","ritm":"RITM3360327","guia_envio":"DHL 4015351922","guia_regreso":""},{"tipo":"Return","tipo_raw":"return(envio y devolucion)","fecha":"2025-12-16","ritm":"RITM3386934","guia_envio":"DHL 3185269846","guia_regreso":"DHL 1006947830"},{"tipo":"Return","tipo_raw":"return(envio y devolucion)","fecha":"2025-12-16","ritm":"RITM3386867","guia_envio":"DHL 3185285865","guia_regreso":"DHL 1006947885"},{"tipo":"Install","tipo_raw":"Envio(Install)","fecha":"2025-12-16","ritm":"RITM3369876","guia_envio":"DHL  67 8520 9970","guia_regreso":""},{"tipo":"Repair","tipo_raw":"Envio y devolucion(Repair)","fecha":"2025-12-17","ritm":"RITM3388139","guia_envio":"DHL 9901021966","guia_regreso":"DHL 2170294932"},{"tipo":"Install","tipo_raw":"Envio(Install)","fecha":"2025-12-17","ritm":"RITM3373241","guia_envio":"DHL 9901194236","guia_regreso":""},{"tipo":"Install","tipo_raw":"Envio(Install)","fecha":"2025-12-17","ritm":"RITM3373244","guia_envio":"DHL 9901041931","guia_regreso":""},{"tipo":"Install","tipo_raw":"Envio(Install)","fecha":"2025-12-17","ritm":"RITM3375226","guia_envio":"DHL 9901168443","guia_regreso":""},{"tipo":"Return","tipo_raw":"Envio y devolucion(return)","fecha":"2025-12-17","ritm":"RITM3388224","guia_envio":"DHL 9901203922","guia_regreso":"DHL 2170294991"},{"tipo":"Repair","tipo_raw":"Envio y devolucion(Repair)","fecha":"2025-12-18","ritm":"RITM3392928","guia_envio":"DHL 4724969900","guia_regreso":"DHL 4999392322"},{"tipo":"Return","tipo_raw":"Envio y devolucion(return)","fecha":"2025-12-18","ritm":"RITM3395918","guia_envio":"DHL 2715538243","guia_regreso":"DHL 2266380900"},{"tipo":"Return","tipo_raw":"Envio y devolucion(return)","fecha":"2025-12-19","ritm":"RITM3398852","guia_envio":"","guia_regreso":"DHL 73 0386 2786"},{"tipo":"Repair","tipo_raw":"Envio y devolucion(Repair)","fecha":"23/12/0205","ritm":"RITM3401400","guia_envio":"DHL 8347141025","guia_regreso":"DHL 9766259812"},{"tipo":"Repair","tipo_raw":"Envio y devolucion(Repair)","fecha":"2025-12-23","ritm":"RITM3402656","guia_envio":"DHL 83 4734 7864","guia_regreso":"DHL 9655784353"},{"tipo":"Return","tipo_raw":"Envio y devolucion(return)","fecha":"2025-11-23","ritm":"RITM3402861","guia_envio":"DHL 83 4734 9920","guia_regreso":"DHL 24 9198 5720"},{"tipo":"Repair","tipo_raw":"Envio y devolucion(Repair)","fecha":"2025-12-30","ritm":"RITM3405809","guia_envio":"DHL 84 8144 2432","guia_regreso":"DHL 1493721806"},{"tipo":"Repair","tipo_raw":"Envio y devolucion(Repair)","fecha":"2025-12-30","ritm":"RITM3405810","guia_envio":"DHL 8481328682","guia_regreso":"DHL 4855128095"},{"tipo":"Return","tipo_raw":"Envio y devolucion(return)","fecha":"2025-12-30","ritm":"RITM3405794","guia_envio":"DHL 3794220511","guia_regreso":"DHL  4855128180"},{"tipo":"Install","tipo_raw":"Envio (Install)","fecha":"2026-01-02","ritm":"RITM3404079","guia_envio":"DHL 8723024785","guia_regreso":""},{"tipo":"Repair","tipo_raw":"Envio y devolucion(Repair)","fecha":"2026-01-06","ritm":"RITM3420264","guia_envio":"DHL 21 2438 8140","guia_regreso":"DHL 67 6129 8773"},{"tipo":"Repair","tipo_raw":"Envio y devolucion(Repair)","fecha":"2026-01-07","ritm":"RITM3423428","guia_envio":"DHL 85 4648 6104","guia_regreso":"DHL 28 8098 5483"},{"tipo":"Repair","tipo_raw":"Envio y devolucion(Repair)","fecha":"2026-01-12","ritm":"RITM3431285","guia_envio":"DHL 17 4601 6576","guia_regreso":"DHL 15 1868 6315"},{"tipo":"Install","tipo_raw":"Envio (Install)","fecha":"2026-01-12","ritm":"RITM3430997","guia_envio":"DHL 79 0351 4043","guia_regreso":""},{"tipo":"Repair","tipo_raw":"Envio y dev (break&fix)","fecha":"2026-01-19","ritm":"RITM3451128","guia_envio":"DHL 2395674481","guia_regreso":"DHL 1368313951"},{"tipo":"Install","tipo_raw":"Envio (Install)","fecha":"2026-01-20","ritm":"RITM3441964","guia_envio":"DHL 93 1996 8011","guia_regreso":""},{"tipo":"Repair","tipo_raw":"Envio y devolucion(Repair)","fecha":"2026-01-20","ritm":"RITM3453296","guia_envio":"DHL 93 1998 0622","guia_regreso":"DHL 95 0078 0310"},{"tipo":"Repair","tipo_raw":"Envio y devolucion(Repair)","fecha":"2026-01-20","ritm":"RITM3454075","guia_envio":"DHL 60 5806 0072","guia_regreso":"DHL 95 0078 0542"},{"tipo":"Return","tipo_raw":"Envio y devolucion(return)","fecha":"2026-01-20","ritm":"RITM3454079","guia_envio":"DHL 97 6105 5485","guia_regreso":"DHL 95 0078 0553"},{"tipo":"Repair","tipo_raw":"Envio y devolucion(Repair)","fecha":"2026-01-21","ritm":"RITM3457795","guia_envio":"DHL 95 7805 3601","guia_regreso":"DHl 1743739141"},{"tipo":"Repair","tipo_raw":"Envio y devolucion(Repair)","fecha":"2026-01-27","ritm":"RITM3466254","guia_envio":"DHl 62 9233 6772","guia_regreso":"DHL 91 5313 4255"},{"tipo":"Repair","tipo_raw":"Envio y devolucion(Repair)","fecha":"2026-01-28","ritm":"RITM3471571","guia_envio":"DHL 2034487291","guia_regreso":"DHL 6276663702"},{"tipo":"Return","tipo_raw":"Envio y devolucion(return)","fecha":"2026-01-28","ritm":"RITM3473777","guia_envio":"DHL 4829520894","guia_regreso":""},{"tipo":"Repair","tipo_raw":"Envio y devolucion(Repair)","fecha":"2026-01-28","ritm":"RITM3473807","guia_envio":"DHL 1636850235","guia_regreso":"DHL 3734430291"},{"tipo":"Repair","tipo_raw":"Envio y devolucion(Repair)","fecha":"2026-01-29","ritm":"RITM3476324","guia_envio":"DHL 1905113350","guia_regreso":"DHL 1576663594"},{"tipo":"Install","tipo_raw":"Envio (Install)","fecha":"2026-01-29","ritm":"RITM3476500","guia_envio":"DHL 19 0512 0033","guia_regreso":""},{"tipo":"Return","tipo_raw":"Envio y devolucion(return)","fecha":"2026-02-04","ritm":"RITM3490092","guia_envio":"DHL 2798880906","guia_regreso":"DHL 3444088804"},{"tipo":"Return","tipo_raw":"Envio y devolucion(return)","fecha":"2026-02-04","ritm":"RITM3490046","guia_envio":"DHL 2798884723","guia_regreso":"DHL 3444088826"},{"tipo":"Return","tipo_raw":"Envio y devolucion(return)","fecha":"2026-02-04","ritm":"RITM3490090","guia_envio":"DHL 2798887564","guia_regreso":"DHL 3444088830"},{"tipo":"Repair","tipo_raw":"Envio y devolucion(Repair)","fecha":"2026-02-04","ritm":"RITM3493062","guia_envio":"DHL 69 8396 3394","guia_regreso":"DHL 34 4408 9224"},{"tipo":"Return","tipo_raw":"Envio y devolucion(return)","fecha":"2026-02-09","ritm":"RITM3501648","guia_envio":"DHL  3793178723","guia_regreso":""},{"tipo":"Repair","tipo_raw":"Envio y devolucion(Repair)","fecha":"2026-02-09","ritm":"RITM3500982","guia_envio":"DHL 5427660604","guia_regreso":""},{"tipo":"Install","tipo_raw":"Envio (Install)","fecha":"2026-02-10","ritm":"RITM3486134","guia_envio":"DHL 23 9642 8576","guia_regreso":""},{"tipo":"Repair","tipo_raw":"Envio y devolucion(Repair)","fecha":"2026-02-10","ritm":"RITM3502431","guia_envio":"DHL 23 9643 7341","guia_regreso":"DHL 17 8264 3192"},{"tipo":"Install","tipo_raw":"Envio (Install)","fecha":"2026-02-10","ritm":"RITM3485335","guia_envio":"DHL 23 9643 2776","guia_regreso":""},{"tipo":"Repair","tipo_raw":"Envio y devolucion(Repair)","fecha":"2026-02-12","ritm":"RITM3511153","guia_envio":"DHl 66 0603 7071","guia_regreso":"DHL 26 4886 7546"},{"tipo":"Return","tipo_raw":"Envio y devolucion(return)","fecha":"2026-02-18","ritm":"RITM3513922","guia_envio":"DHl 6194115012","guia_regreso":"DHL 8006638242"},{"tipo":"Install","tipo_raw":"Envio (Install)","fecha":"2026-02-20","ritm":"RITM3524606","guia_envio":"DHL 8300805936","guia_regreso":""},{"tipo":"Install","tipo_raw":"Envio (Install)","fecha":"2026-02-24","ritm":"RITM3524612","guia_envio":"DHL 13 9538 7195","guia_regreso":""},{"tipo":"Install","tipo_raw":"Envio (Install)","fecha":"2026-02-25","ritm":"RITM3534937","guia_envio":"DHL  5011157141","guia_regreso":""},{"tipo":"Install","tipo_raw":"Envio (Install)","fecha":"2026-02-26","ritm":"RITM3526985","guia_envio":"DHL 5857940034","guia_regreso":""},{"tipo":"Return","tipo_raw":"Envio y devolucion(return)","fecha":"46080.0","ritm":"RITM3538525","guia_envio":"DHL 9613667070","guia_regreso":"DHL 96 1366 7070"},{"tipo":"Install","tipo_raw":"Envio (Install)","fecha":"2026-03-02","ritm":"RITM3538124","guia_envio":"DHL 5975440100","guia_regreso":""},{"tipo":"Repair","tipo_raw":"Envio y devolucion(Repair)","fecha":"2026-03-03","ritm":"RITM3548597","guia_envio":"DHL 41 1346 7562","guia_regreso":"DHL 34 0973 9373"},{"tipo":"Return","tipo_raw":"Envio y devolucion(return)","fecha":"2026-03-03","ritm":"RITM3548252","guia_envio":"DHL 41 1346 9323","guia_regreso":"DHL 34 0973 9384"},{"tipo":"Repair","tipo_raw":"Envio y devolucion(Repair)","fecha":"2026-03-04","ritm":"RITM3551239","guia_envio":"DHL 42 4074 9553","guia_regreso":"DHL 12 9287 4671"},{"tipo":"Install","tipo_raw":"Envio (Install)","fecha":"2026-03-04","ritm":"RITM3551497","guia_envio":"DHL 42 4075 4405","guia_regreso":""},{"tipo":"Return","tipo_raw":"Envio y devolucion(return)","fecha":"2026-03-04","ritm":"RITM3551249","guia_envio":"DHL 42 4075 7986","guia_regreso":"DHL 61 8366 3931"},{"tipo":"Repair","tipo_raw":"Envio y devolucion(Repair)","fecha":"2026-03-10","ritm":"RITM3558206","guia_envio":"retiro por oficina","guia_regreso":"devolvio en oficina"},{"tipo":"Return","tipo_raw":"Envio y devolucion(return)","fecha":"2026-03-12","ritm":"RITM3572889","guia_envio":"DHL 52 5264 6302","guia_regreso":"DHL 63 3397 6445"},{"tipo":"Repair","tipo_raw":"Envio y devolucion(Repair)","fecha":"2026-03-16","ritm":"RITM3575684","guia_envio":"DHL 5397306714","guia_regreso":"DHL 3788383384"},{"tipo":"Return","tipo_raw":"Envio y devolucion(return)","fecha":"2026-03-17","ritm":"RITM3581639","guia_envio":"DHL 85 4590 3925","guia_regreso":"DHL 45 3220 5930"},{"tipo":"Repair","tipo_raw":"Envio y devolucion(Repair)","fecha":"2026-03-20","ritm":"RITM3587697","guia_envio":"DHL 1762922221","guia_regreso":"DHL 3330129806"}];
+
+async function reloadGuias(){
+  const{data}=await sb.from('guias').select('*').order('fecha',{ascending:false}).order('created_at',{ascending:false});
+  if(data&&data.length>0) guiasData=data;
+  else guiasData=GDATA.slice();
+  gBuildFilters();gApply();
+}
+
+function gBuildFilters(){
+  const meses=[...new Set(guiasData.map(d=>d.fecha?d.fecha.slice(0,7):'').filter(Boolean))].sort().reverse();
+  const sel=document.getElementById('g-mes'),cur=sel.value;
+  sel.innerHTML='<option value="">Todos los meses</option>'+meses.map(m=>{
+    const[y,mo]=m.split('-');
+    const label=new Date(y,mo-1).toLocaleDateString('es-AR',{month:'long',year:'numeric'});
+    return`<option value="${m}"${m===cur?' selected':''}>${label}</option>`;
+  }).join('');
+}
+
+function gApply(){
+  const q=document.getElementById('g-search').value.toLowerCase();
+  const tipo=document.getElementById('g-tipo').value;
+  const mes=document.getElementById('g-mes').value;
+  gFiltered=guiasData.filter(d=>{
+    const txt=((d.ritm||'')+(d.guia_envio||'')+(d.guia_regreso||'')).toLowerCase();
+    return(!q||txt.includes(q))&&(!tipo||d.tipo===tipo)&&(!mes||(d.fecha||'').startsWith(mes));
+  });
+  const _gsc=document.getElementById('g-sort-col')?.value||'fecha';
+  const _gsd=parseInt(document.getElementById('g-sort-dir')?.value||'-1');
+  gFiltered.sort((a,b)=>{
+    if(_gsc==='fecha'){
+      const da=a.fecha?new Date(a.fecha):new Date(0);
+      const db=b.fecha?new Date(b.fecha):new Date(0);
+      return (db-da)*_gsd;
+    }
+    return ((a[_gsc]||'').localeCompare(b[_gsc]||''))*_gsd;
+  });
+  gPage=1;gRender();
+}
+
+function gRender(){
+  const start=(gPage-1)*PS,end=start+PS,rows=gFiltered.slice(start,end);
+  document.getElementById('g-ri').textContent=`${gFiltered.length} guías`;
+  const ce=canEdit();
+  if(!rows.length){document.getElementById('g-tbody').innerHTML='<tr><td colspan="6" class="empty">Sin guías con esos filtros.</td></tr>';gPg();gSummary();return;}
+  document.getElementById('g-tbody').innerHTML=rows.map(d=>{
+    const hasReg=d.guia_regreso&&d.guia_regreso.trim();
+    return`<tr>
+      <td style="font-family:monospace;font-size:12px;font-weight:500">${esc(d.ritm||'—')}</td>
+      <td><span class="badge ${TIPO_CLS[d.tipo]||'t-install'}">${esc(d.tipo)}</span></td>
+      <td style="font-size:12px;color:var(--text2);white-space:nowrap">${fmtFecha(d.fecha)}</td>
+      <td>
+        ${d.guia_envio?`<span style="font-family:monospace;font-size:12px;background:var(--teal-bg);color:var(--teal-t);padding:2px 7px;border-radius:5px">${esc(d.guia_envio)}</span>`:'<span style="color:var(--text3)">—</span>'}
+      </td>
+      <td>
+        ${hasReg?`<span style="font-family:monospace;font-size:12px;background:var(--blue-bg);color:var(--blue-t);padding:2px 7px;border-radius:5px">${esc(d.guia_regreso)}</span>`:'<span style="color:var(--text3)">—</span>'}
+      </td>
+      <td>${ce?`<div class="ab">
+        <button class="ib" onclick="openGForm('${d.id}')">✎</button>
+        ${isAdmin()?`<button class="ib del" onclick="gDelete('${d.id}','${esc(d.ritm)}')">✕</button>`:''}
+      </div>`:'—'}</td>
+    </tr>`;
+  }).join('');
+  gPg();gSummary();
+}
+
+function gSummary(){
+  const t={};
+  guiasData.forEach(d=>{t[d.tipo]=(t[d.tipo]||0)+1;});
+  const cols=[['Install','#1d9e75'],['Return','#378add'],['Repair','#d85a30']];
+  document.getElementById('g-summary').innerHTML=
+    cols.map(([n,c])=>`<div class="sc" style="border-top:3px solid ${c}" onclick="document.getElementById('g-tipo').value='${n}';gApply()">
+      <div class="lbl">${n}</div><div class="val">${t[n]||0}</div><div class="sub">guías</div>
+    </div>`).join('')+
+    `<div class="sc" style="border-top:3px solid var(--teal-b)" onclick="document.getElementById('g-tipo').value='';gApply()">
+      <div class="lbl">Total</div><div class="val">${guiasData.length}</div><div class="sub">guías</div>
+    </div>`;
+}
+
+function gPg(){
+  const total=Math.ceil(gFiltered.length/PS),p=document.getElementById('g-pg');
+  p.innerHTML=total<=1?'':`<button class="pb" onclick="gChPage(${gPage-1})" ${gPage===1?'disabled':''}>← Anterior</button>
+    <span style="font-size:12px;color:var(--text2)">Pág. ${gPage}/${total}</span>
+    <button class="pb" onclick="gChPage(${gPage+1})" ${gPage===total?'disabled':''}>Siguiente →</button>`;
+}
+function gChPage(n){gPage=n;gRender();}
+function gSort(col){
+  if(gSortCol===col){gSortDir*=-1;}else{gSortCol=col;gSortDir=col==='fecha'?-1:1;}
+  gApply();
+}
+
+async function openGForm(id=null){
+  if(!canEdit())return;
+  gEditId=id;
+  const d=id?guiasData.find(x=>x.id===id):null;
+  document.getElementById('g-mt').textContent=d?'Editar guía':'Agregar guía';
+  const f=(el,v)=>document.getElementById(el).value=v||'';
+  f('gm-tipo',d?d.tipo:'Install');f('gm-fecha',d?d.fecha:'');
+  f('gm-ritm',d?d.ritm:'');f('gm-env',d?d.guia_envio:'');f('gm-reg',d?d.guia_regreso:'');
+  document.getElementById('g-modal').classList.add('open');
+}
+function closeGForm(){document.getElementById('g-modal').classList.remove('open');}
+async function saveGItem(){
+  const g=id=>document.getElementById(id).value.trim();
+  if(!g('gm-ritm')){alert('El RITM es obligatorio.');return;}
+  const item={tipo:g('gm-tipo'),fecha:g('gm-fecha'),ritm:g('gm-ritm'),guia_envio:g('gm-env'),guia_regreso:g('gm-reg')};
+  let res;
+  if(gEditId){res=await sb.from('guias').update(item).eq('id',gEditId);}
+  else{res=await sb.from('guias').insert(item);}
+  if(res.error){alert('Error: '+res.error.message);return;}
+  await logAction(gEditId?'Editó guía':'Agregó guía','ticket',gEditId||'nuevo',{ritm:item.ritm,guia_envio:item.guia_envio});
+  closeGForm();await reloadGuias();
+}
+async function gDelete(id,ritm){
+  if(!isAdmin())return;
+  if(!confirm(`¿Eliminar guía ${ritm}?`))return;
+  await sb.from('guias').delete().eq('id',id);
+  await logAction('Eliminó guía','ticket',id,{ritm});
+  await reloadGuias();
+}
+function gExport(){
+  const h=['Fecha','RITM','Tipo','Guía envío','Guía regreso'];
+  const rows=gFiltered.map(d=>[d.fecha,d.ritm,d.tipo,d.guia_envio,d.guia_regreso].map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(','));
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent('\uFEFF'+[h.join(','),...rows].join('\n'));
+  a.download='guias-courier.csv';a.click();
+}
+
+
+// ════════ TICKET DETAIL MODAL ════════
+let tdCurrentId = null;
+
+function openTDetail(id) {
+  const d = tickets.find(x => x.id === id);
+  if (!d) return;
+  tdCurrentId = id;
+  const isProg = d.estado === 'En progreso';
+  const isRet = d.tipo === 'Return';
+  const ce = canEdit();
+
+  // Header
+  document.getElementById('td-ritm').textContent = d.ritm || '';
+  const tipoBadge = document.getElementById('td-tipo-badge');
+  tipoBadge.textContent = d.tipo;
+  tipoBadge.className = 'badge ' + (TIPO_CLS[d.tipo] || 't-install');
+  const estBadge = document.getElementById('td-estado-badge');
+  estBadge.textContent = d.estado;
+  estBadge.className = 'badge ' + (isProg ? 's-prog' : 's-done');
+  document.getElementById('td-resp').textContent = d.envio_responsable || d.dev_responsable || '';
+
+  // Footer buttons
+  document.getElementById('td-estado-btn').textContent = isProg ? '✓ Marcar terminado' : '↩ Reabrir';
+  document.getElementById('td-edit-btn').style.display = ce ? '' : 'none';
+  document.getElementById('td-del-btn').style.display = isAdmin() ? '' : 'none';
+  if (!ce) document.getElementById('td-estado-btn').style.display = 'none';
+
+  // Stock link button
+  const eSerial = d.envio_serial && !isCaja(d.envio_serial) ? d.envio_serial : null;
+  const dSerial = d.dev_serial && !isCaja(d.dev_serial) ? d.dev_serial : null;
+  const linkedSerial = eSerial || dSerial;
+  const stockItem = linkedSerial ? findStock(linkedSerial) : null;
+  const stockBtn = document.getElementById('td-stock-btn');
+  if (stockItem) {
+    stockBtn.style.display = '';
+    stockBtn.textContent = `Ver ${stockItem.serial.toUpperCase()} en stock →`;
+    stockBtn.dataset.serial = stockItem.serial;
+  } else {
+    stockBtn.style.display = 'none';
+  }
+
+  // Body
+  const field = (k, v, full=false) => v ? `<div class="td-field${full?' full':''}"><div class="k">${k}</div><div class="v">${esc(v)}</div></div>` : '';
+  const serialField = (k, serial) => {
+    if (!serial) return '';
+    if (isCaja(serial)) return `<div class="td-field"><div class="k">${k}</div><div class="v"><span class="caja-chip">caja con insumos</span></div></div>`;
+    const f = findStock(serial);
+    const chip = f
+      ? `<div class="td-stock-chip td-stock-ok" onclick="goToStock('${serial}')" title="Click para ver en stock">✓ ${esc(f.modelo)} · ${esc(f.estado)}${f.asignado_ritm?' · En ticket '+esc(f.asignado_ritm):''}</div>`
+      : `<div class="td-stock-chip td-stock-miss">No en stock</div>`;
+    return `<div class="td-field"><div class="k">${k}</div><div class="v"><span class="mono">${esc(serial.toUpperCase())}</span>${chip}</div></div>`;
+  };
+
+  let html = '';
+  const hasEnvio = d.envio_tracking || d.envio_fecha || d.envio_responsable || d.envio_serial;
+  if (hasEnvio) {
+    html += `<div class="td-section">
+      <div class="td-section-title" style="color:var(--teal-t)">${isRet ? 'Envío — caja con insumos' : 'Envío'}</div>
+      <div class="td-grid">
+        ${field('Courier', d.envio_courier)}${field('Responsable', d.envio_responsable)}
+        ${field('Tracking', d.envio_tracking)}${field('Fecha', fmtFecha(d.envio_fecha))}
+        ${field('Dirección', d.envio_direccion, true)}
+        ${isRet ? `<div class="td-field full"><div class="k">Serial enviado</div><div class="v"><span class="caja-chip">caja con insumos</span></div></div>` : serialField('Serial enviado', d.envio_serial)}
+        ${!isRet ? field('Test', d.envio_test) : ''}${!isRet ? field('Condición', d.envio_condicion) : ''}
+        ${!isRet && d.envio_trabajo ? field('Trabajo realizado', d.envio_trabajo, true) : ''}
+      </div>
+    </div>`;
+  }
+  const hasDev = d.dev_tracking || d.dev_fecha || d.dev_responsable || d.dev_serial;
+  if (hasDev) {
+    html += `<div class="td-section">
+      <div class="td-section-title" style="color:var(--blue-t)">Devolución</div>
+      <div class="td-grid">
+        ${field('Responsable', d.dev_responsable)}${field('Dirección', d.dev_direccion)}
+        ${field('Tracking', d.dev_tracking)}${field('Fecha', fmtFecha(d.dev_fecha))}
+        ${serialField('Serial recibido', d.dev_serial)}
+        ${field('Test', d.dev_test)}${field('Condición', d.dev_condicion)}
+        ${d.dev_trabajo ? field('Trabajo / diagnóstico', d.dev_trabajo, true) : ''}
+      </div>
+    </div>`;
+  }
+  if (d.comentarios) html += `<div class="td-coment">${esc(d.comentarios)}</div>`;
+  if (!html) html = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px">Sin datos adicionales.</div>';
+
+  document.getElementById('td-body').innerHTML = html;
+  document.getElementById('td-modal').classList.add('open');
+}
+
+function closeTDetail() {
+  document.getElementById('td-modal').classList.remove('open');
+  tdCurrentId = null;
+}
+
+async function tdToggleEstado() {
+  if (!tdCurrentId) return;
+  const t = tickets.find(x => x.id === tdCurrentId);
+  if (!t) return;
+  const wasProgreso = t.estado === 'En progreso';
+  const newEstado = wasProgreso ? 'Terminado' : 'En progreso';
+  await sb.from('tickets').update({estado: newEstado}).eq('id', tdCurrentId);
+  await logAction(`${wasProgreso?'Cerró':'Reabrió'} ticket`, 'ticket', tdCurrentId, {ritm: t.ritm, estado: newEstado});
+  if (wasProgreso) await syncStockFromTicket({...t, estado: 'Terminado'});
+  closeTDetail();
+  await reloadTickets();
+}
+
+function tdEdit() {
+  if (!tdCurrentId) return;
+  const idToEdit = tdCurrentId;
+  closeTDetail();
+  openTForm(idToEdit);
+}
+
+async function tdDelete() {
+  if (!tdCurrentId) return;
+  const t = tickets.find(x => x.id === tdCurrentId);
+  if (!t || !confirm(`¿Eliminar ${t.ritm}?`)) return;
+  await sb.from('tickets').delete().eq('id', tdCurrentId);
+  await logAction('Eliminó ticket', 'ticket', tdCurrentId, {ritm: t.ritm});
+  closeTDetail();
+  await reloadTickets();
+}
+
+function goToTicketByRitm(ritm) {
+  // Switch to tickets page and search by RITM
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-tickets').classList.add('active');
+  document.querySelectorAll('.nav-tab')[0].classList.add('active');
+  document.getElementById('t-search').value=ritm;
+  tApply();
+}
+
+function goToStock(serial) {
+  closeTDetail();
+  // Switch to stock page and search
+  const tab = document.querySelector('.nav-tab:first-of-type');
+  showPage('stock', document.querySelectorAll('.nav-tab')[0]);
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-tab')[0].classList.add('active');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-stock').classList.add('active');
+  const s = serial || document.getElementById('td-stock-btn').dataset.serial || '';
+  document.getElementById('s-search').value = s;
+  sApply();
+}
+
+
+
+// ── SUBMENUS ──
+function toggleSubmenu(id) {
+  const sub = document.getElementById(id);
+  const isOpen = sub.classList.contains('open');
+  closeSubmenus();
+  if(!isOpen) sub.classList.add('open');
+}
+function closeSubmenus() {
+  document.querySelectorAll('.nav-submenu').forEach(s=>s.classList.remove('open'));
+}
+document.addEventListener('click', e => {
+  if(!e.target.closest('.nav-dropdown')) closeSubmenus();
+});
+
+// ── THEME ──
+function initTheme(){
+  const saved=localStorage.getItem('theme');
+  if(saved){
+    document.documentElement.setAttribute('data-theme',saved);
+    updateThemeBtn(saved);
+  } else {
+    // detect system
+    const dark=window.matchMedia('(prefers-color-scheme:dark)').matches;
+    document.documentElement.setAttribute('data-theme',dark?'dark':'light');
+    updateThemeBtn(dark?'dark':'light');
+  }
+}
+function toggleTheme(){
+  const current=document.documentElement.getAttribute('data-theme')||'light';
+  const next=current==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',next);
+  localStorage.setItem('theme',next);
+  updateThemeBtn(next);
+}
+function updateThemeBtn(theme){
+  const btn=document.getElementById('theme-btn');
+  if(btn)btn.textContent=theme==='dark'?'☀️':'🌙';
+}
+
+
+// ════════ DASHBOARD ════════
+let _charts = {};
+
+function destroyChart(id) {
+  if (_charts[id]) { _charts[id].destroy(); delete _charts[id]; }
+}
+
+function getChartColors(n) {
+  const palette = ['#1d9e75','#378add','#d85a30','#7f77dd','#ba7517','#e24b4a','#639922','#888780'];
+  return Array.from({length: n}, (_, i) => palette[i % palette.length]);
+}
+
+function renderDashboard() {
+  const meses = parseInt(document.getElementById('dash-periodo')?.value || '6');
+  const cutoff = meses > 0 ? new Date(Date.now() - meses * 30 * 86400000) : new Date(0);
+
+  const filteredTickets = tickets.filter(t => {
+    if(meses === 0) return true;
+    const d = new Date(t.envio_fecha || t.created_at || '2020-01-01');
+    return d >= cutoff;
+  });
+
+  // ── KPIs ──
+  const enProgreso = filteredTickets.filter(t => t.estado === 'En progreso').length;
+  const terminados = filteredTickets.filter(t => t.estado === 'Terminado').length;
+  const operativo = stock.filter(s => (s.estado === 'Operativo' || s.estado === 'Operativa') && (s.categoria === 'Notebook' || s.categoria === 'Mini PC')).length;
+  const pendiente = stock.filter(s => s.estado !== 'Operativo' && s.estado !== 'Operativa').length;
+
+  document.getElementById('dash-kpis').innerHTML = [
+    {label:'Tickets en progreso', val:enProgreso, sub:'activos ahora', color:'#1d9e75', pct:100},
+    {label:'Tickets terminados', val:terminados, sub:'en el período', color:'#378add', pct:100},
+    {label:'Equipos operativos', val:operativo, sub:'en stock', color:'#639922', pct:Math.round(operativo/(operativo+pendiente||1)*100)},
+    {label:'Pending disposal', val:stock.filter(s=>s.estado==='Pending disposal').length, sub:'para dar de baja', color:'#d85a30', pct:100},
+    {label:'Pending repair', val:stock.filter(s=>s.estado==='Pending repair').length, sub:'esperando reparación', color:'#ba7517', pct:100},
+  ].map(k => `<div class="dash-kpi">
+    <div class="dash-kpi-label">${k.label}</div>
+    <div class="dash-kpi-val">${k.val}</div>
+    <div class="dash-kpi-sub">${k.sub}</div>
+    <div class="dash-kpi-bar" style="width:${k.pct}%;background:${k.color}"></div>
+  </div>`).join('');
+
+  // ── CHART 1: Tickets por mes ──
+  destroyChart('mes');
+  const mesMap = {};
+  filteredTickets.forEach(t => {
+    const d = t.envio_fecha || '';
+    if(!d) return;
+    const key = d.slice(0,7);
+    if(!mesMap[key]) mesMap[key] = {prog:0, term:0};
+    if(t.estado === 'En progreso') mesMap[key].prog++;
+    else mesMap[key].term++;
+  });
+  const mesKeys = Object.keys(mesMap).sort();
+  const mesLabels = mesKeys.map(k => {
+    const [y,m] = k.split('-');
+    return new Date(y,m-1).toLocaleDateString('es-AR',{month:'short',year:'2-digit'});
+  });
+  const ctx1 = document.getElementById('chart-tickets-mes').getContext('2d');
+  _charts['mes'] = new Chart(ctx1, {
+    type: 'bar',
+    data: {
+      labels: mesLabels,
+      datasets: [
+        {label:'Terminados', data: mesKeys.map(k=>mesMap[k].term), backgroundColor:'#378add', borderRadius:4},
+        {label:'En progreso', data: mesKeys.map(k=>mesMap[k].prog), backgroundColor:'#1d9e75', borderRadius:4}
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12}}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'rgba(128,128,128,0.1)'},ticks:{font:{size:10},stepSize:1}}}
+    }
+  });
+
+  // ── CHART 2: Tickets por tipo (donut) ──
+  destroyChart('tipo');
+  const tipoMap = {};
+  filteredTickets.forEach(t => { tipoMap[t.tipo] = (tipoMap[t.tipo]||0)+1; });
+  const tipoKeys = Object.keys(tipoMap).sort();
+  const ctx2 = document.getElementById('chart-tickets-tipo').getContext('2d');
+  _charts['tipo'] = new Chart(ctx2, {
+    type: 'doughnut',
+    data: {
+      labels: tipoKeys,
+      datasets: [{data: tipoKeys.map(k=>tipoMap[k]), backgroundColor: getChartColors(tipoKeys.length), borderWidth:2, borderColor:'transparent'}]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12}}}
+    }
+  });
+
+  // ── CHART 3: Stock por estado (donut) ──
+  destroyChart('stock');
+  const estMap = {};
+  stock.forEach(s => {
+    const normalEstado = s.estado==='Operativa'?'Operativo':s.estado==='No operativa'?'No operativo':s.estado;
+    estMap[normalEstado] = (estMap[normalEstado]||0)+1;
+  });
+  const estKeys = Object.keys(estMap).sort();
+  const estColors = {'Operativo':'#1d9e75','Pending repair':'#ba7517','Pending disposal':'#d85a30','No operativo':'#e24b4a'};
+  const ctx3 = document.getElementById('chart-stock-estado').getContext('2d');
+  _charts['stock'] = new Chart(ctx3, {
+    type: 'doughnut',
+    data: {
+      labels: estKeys,
+      datasets: [{data: estKeys.map(k=>estMap[k]), backgroundColor: estKeys.map(k=>estColors[k]||'#888780'), borderWidth:2, borderColor:'transparent'}]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12}}}
+    }
+  });
+
+  // ── DESTINOS: donde van los envios ──
+  const destMap = {};
+  const CITY_NORM = {
+    'caba':'CABA','cab a':'CABA','c.a.b.a':'CABA','capital federal':'CABA',
+    'tortuguitas':'Tortuguitas','burzaco':'Burzaco','banfield':'Banfield',
+    'salta':'Salta','cordoba':'Córdoba','santa fe':'Santa Fe','pergamino':'Pergamino',
+    'moreno':'Moreno','quilmes':'Quilmes','rosario':'Rosario'
+  };
+  filteredTickets.forEach(t => {
+    const dir = (t.envio_direccion || '').trim();
+    if(!dir || dir.length < 3) return;
+    // Take first segment (the actual address) before first comma
+    const parts = dir.split(',').map(p=>p.trim()).filter(Boolean);
+    let addr = parts[0];
+    // Normalize: lowercase key for grouping, display capitalized
+    const addrKey = addr.toLowerCase().replace(/\s+/g,' ').trim();
+    const addrDisplay = addrKey.replace(/\w/g, c=>c.toUpperCase());
+    if(addrKey.length > 2){
+      if(!destMap[addrDisplay]) destMap[addrDisplay]=0;
+      // Merge by lowercase key
+      const existing = Object.keys(destMap).find(k=>k.toLowerCase()===addrKey);
+      if(existing) destMap[existing]++;
+      else destMap[addrDisplay]=1;
+    }
+  });
+  const destSorted = Object.entries(destMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const destMax = destSorted[0]?.[1] || 1;
+  document.getElementById('dash-destinos').innerHTML = destSorted.length
+    ? destSorted.map(([lugar,cnt]) => `<div class="dash-destino-row">
+        <div class="dash-destino-label" title="${esc(lugar)}">${esc(lugar)}</div>
+        <div class="dash-destino-bar-wrap"><div class="dash-destino-bar" style="width:${Math.round(cnt/destMax*100)}%"></div></div>
+        <div class="dash-destino-count" style="font-weight:600;color:var(--text)">${cnt}</div>
+      </div>`).join('')
+    : '<div style="color:var(--text3);font-size:13px;text-align:center;padding:40px 0">Sin datos de direcciones</div>';
+}
+
+
+// ════════ ALERTAS ════════
+const ALERTA_DIAS_GARANTIA = 30;
+let alertasDismissed = JSON.parse(localStorage.getItem('alertas_dismissed')||'[]');
+
+function dismissAlerta(id) {
+  if(!alertasDismissed.includes(id)) alertasDismissed.push(id);
+  localStorage.setItem('alertas_dismissed', JSON.stringify(alertasDismissed));
+  renderAlertas();
+}
+
+function clearAllAlertas() {
+  const allIds = _currentAlertas.map(a=>a.id);
+  alertasDismissed = [...new Set([...alertasDismissed, ...allIds])];
+  localStorage.setItem('alertas_dismissed', JSON.stringify(alertasDismissed));
+  renderAlertas();
+}
+
+function restoreAlertas() {
+  alertasDismissed = [];
+  localStorage.removeItem('alertas_dismissed');
+  renderAlertas();
+}
+
+let _currentAlertas = [];
+
+function daysDiff(dateStr) {
+  if(!dateStr) return null;
+  try { return Math.floor((new Date() - new Date(dateStr)) / 86400000); }
+  catch(e){ return null; }
+}
+
+function parseGarantia(str) {
+  if(!str) return null;
+  try {
+    const meses = {enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,julio:6,agosto:7,septiembre:8,octubre:9,noviembre:10,diciembre:11};
+    const m1 = str.toLowerCase().match(/(\d+)\s+de\s+(\w+)\s+del?\s+(\d{4})/);
+    if(m1) return new Date(parseInt(m1[3]), meses[m1[2]]||0, parseInt(m1[1]));
+    const m2 = str.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if(m2) return new Date(m2[1], parseInt(m2[2])-1, m2[3]);
+    const m3 = str.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
+    if(m3) return new Date(m3[3], parseInt(m3[2])-1, m3[1]);
+    return null;
+  } catch(e){ return null; }
+}
+
+function renderAlertas() {
+  const all = [];
+
+  // ── 1. Repair/Return enviado sin tracking de devolución ──
+  tickets.filter(t => t.estado==='En progreso' && ['Repair','Return'].includes(t.tipo))
+    .forEach(t => {
+      const tieneEnvio = t.envio_tracking && t.envio_tracking.trim();
+      const tieneDev = t.dev_tracking && t.dev_tracking.trim();
+      if(tieneEnvio && !tieneDev) {
+        all.push({
+          id:`no-dev-${t.id}`,
+          nivel:'advertencia',
+          icon:'📬',
+          title:`${t.tipo} sin tracking de devolución`,
+          desc:`${t.ritm} · ${t.envio_responsable||'Sin responsable'} · Enviado: ${t.envio_tracking}`,
+          badge:'Sin devolución',
+          action:()=>goToTicketByRitm(t.ritm)
+        });
+      }
+    });
+
+  // ── 2. Tickets sin serial de envío ──
+  tickets.filter(t => t.estado==='En progreso' && t.tipo!=='Return' && (!t.envio_serial||!t.envio_serial.trim()))
+    .forEach(t => {
+      all.push({
+        id:`no-serial-${t.id}`,
+        nivel:'advertencia',
+        icon:'🔍',
+        title:`Ticket sin serial de envío`,
+        desc:`${t.ritm} · ${t.tipo} · ${t.envio_responsable||'Sin responsable'}`,
+        badge:'Dato faltante',
+        action:()=>goToTicketByRitm(t.ritm)
+      });
+    });
+
+  // ── 3. Garantías vencidas ──
+  stock.filter(s=>s.venc_garantia).forEach(s => {
+    const gDate = parseGarantia(s.venc_garantia);
+    if(!gDate) return;
+    const diasHastaVenc = Math.floor((gDate - new Date()) / 86400000);
+    if(diasHastaVenc < 0) {
+      all.push({
+        id:`gar-venc-${s.id}`,
+        nivel:'critica',
+        icon:'📛',
+        title:`Garantía vencida: ${s.modelo||s.serial}`,
+        desc:`Serial ${s.serial} · Venció ${s.venc_garantia}`,
+        badge:'Vencida',
+        action:()=>{ document.getElementById('s-search').value=s.serial; showPageById('stock'); sApply(); }
+      });
+    } else if(diasHastaVenc <= ALERTA_DIAS_GARANTIA) {
+      all.push({
+        id:`gar-prox-${s.id}`,
+        nivel:'advertencia',
+        icon:'📅',
+        title:`Garantía por vencer: ${s.modelo||s.serial}`,
+        desc:`Serial ${s.serial} · Vence en ${diasHastaVenc} días (${s.venc_garantia})`,
+        badge:`${diasHastaVenc} días`,
+        action:()=>{ document.getElementById('s-search').value=s.serial; showPageById('stock'); sApply(); }
+      });
+    }
+  });
+
+  // ── 4. Equipos en Pending repair ──
+  const pendingRepair = stock.filter(s => s.estado === 'Pending repair');
+  if(pendingRepair.length > 0) {
+    all.push({
+      id:'pending-repair-group',
+      nivel:'informativa',
+      icon:'🔧',
+      title:`${pendingRepair.length} equipo${pendingRepair.length>1?'s':''} en Pending repair`,
+      desc:pendingRepair.slice(0,4).map(s=>(s.serial||'').toUpperCase()).join(', ')+(pendingRepair.length>4?' ...':''),
+      badge:'Ver equipos',
+      action:()=>{ document.getElementById('s-est').value='Pending repair'; showPageById('stock'); sApply(); }
+    });
+  }
+
+  _currentAlertas = all;
+  const visible = all.filter(a => !alertasDismissed.includes(a.id));
+  const criticas = visible.filter(a=>a.nivel==='critica');
+  const advertencias = visible.filter(a=>a.nivel==='advertencia');
+  const informativas = visible.filter(a=>a.nivel==='informativa');
+  const dismissed = all.filter(a=>alertasDismissed.includes(a.id));
+
+  // KPIs
+  document.getElementById('alerta-kpis').innerHTML = `
+    <div class="alerta-kpi critica"><div class="av">${criticas.length}</div><div class="al">Críticas</div></div>
+    <div class="alerta-kpi advertencia"><div class="av">${advertencias.length}</div><div class="al">Advertencias</div></div>
+    <div class="alerta-kpi informativa"><div class="av">${informativas.length}</div><div class="al">Informativas</div></div>`;
+
+  function renderItems(items, containerId, sectionId) {
+    const sec = document.getElementById(sectionId);
+    const cont = document.getElementById(containerId);
+    if(!items.length){ sec.style.display='none'; return; }
+    sec.style.display='block';
+    cont.innerHTML = items.map(a => `
+      <div class="alerta-item ${a.nivel}" onclick="(${a.action.toString()})()">
+        <div class="alerta-item-icon">${a.icon}</div>
+        <div class="alerta-item-body">
+          <div class="alerta-item-title">${esc(a.title)}</div>
+          <div class="alerta-item-desc">${esc(a.desc)}</div>
+        </div>
+        <span class="alerta-item-badge">${esc(a.badge)}</span>
+        <button onclick="event.stopPropagation();dismissAlerta('${a.id}')" title="Cerrar alerta"
+          style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;padding:0 4px;flex-shrink:0">✕</button>
+      </div>`).join('');
+  }
+
+  renderItems(criticas, 'alerta-criticas', 'alerta-criticas-sec');
+  renderItems(advertencias, 'alerta-advertencias', 'alerta-advertencias-sec');
+  renderItems(informativas, 'alerta-informativas', 'alerta-informativas-sec');
+
+  // Dismissed section
+  const dimSec = document.getElementById('alerta-dismissed-sec');
+  if(dismissed.length > 0) {
+    dimSec.style.display='block';
+    dimSec.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-top:12px;display:flex;align-items:center;justify-content:space-between">
+      <span>${dismissed.length} alerta${dismissed.length>1?'s':''} cerrada${dismissed.length>1?'s':''}</span>
+      <button onclick="restoreAlertas()" class="btn btn-outline btn-sm">Restaurar todas</button>
+    </div>`;
+  } else { dimSec.style.display='none'; }
+
+  // Empty state
+  const emptyEl = document.getElementById('alerta-empty');
+  if(!visible.length) emptyEl.style.display='block';
+  else emptyEl.style.display='none';
+
+  // Bell dot
+  const bellDot = document.getElementById('bell-dot');
+  if(bellDot) bellDot.style.display = criticas.length > 0 ? 'block' : 'none';
+
+  // Bell dropdown content
+  const bellContent = document.getElementById('bell-content');
+  if(bellContent) {
+    const allVisible = [...criticas, ...advertencias, ...informativas];
+    if(!allVisible.length) {
+      bellContent.innerHTML = '<div class="bell-empty">Sin alertas activas</div>';
+    } else {
+      bellContent.innerHTML = allVisible.map(a => `
+        <div class="bell-alerta ${a.nivel}" onclick="(${a.action.toString()})();toggleBell()">
+          <div class="bell-alerta-icon">${a.icon}</div>
+          <div class="bell-alerta-body">
+            <div class="bell-alerta-title">${esc(a.title)}</div>
+            <div class="bell-alerta-desc">${esc(a.desc)}</div>
+          </div>
+          <button class="bell-dismiss" onclick="event.stopPropagation();dismissAlerta('${a.id}')">✕</button>
+        </div>`).join('');
+    }
+    // Dismissed footer
+    const dismissed = _currentAlertas.filter(a=>alertasDismissed.includes(a.id));
+    if(dismissed.length > 0) {
+      bellContent.innerHTML += `<div style="padding:8px 10px;font-size:11px;color:var(--text3);display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);margin-top:4px">
+        <span>${dismissed.length} cerrada${dismissed.length>1?'s':''}</span>
+        <button onclick="restoreAlertas()" style="font-size:11px;background:none;border:none;cursor:pointer;color:var(--blue-b)">Restaurar</button>
+      </div>`;
+    }
+  }
+}
+
+function toggleBell() {
+  const dd = document.getElementById('bell-dropdown');
+  dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+  if(dd.style.display === 'block') renderAlertas();
+}
+
+// Close bell when clicking outside
+document.addEventListener('click', e => {
+  const bell = document.getElementById('bell-btn');
+  const dd = document.getElementById('bell-dropdown');
+  if(dd && bell && !bell.contains(e.target) && !dd.contains(e.target)) {
+    dd.style.display = 'none';
+  }
+});
+
+function showPageById(id) {
+  const pageMap = {
+    'tickets':'tab-tickets-group','returns':'tab-tickets-group','guias':'tab-tickets-group',
+    'historial':'tab-gestion-group','usuarios':'tab-gestion-group',
+    'stock':'tab-stock','dashboard':'tab-dashboard'
+  };
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  const groupId = pageMap[id];
+  if(groupId){
+    const grp = document.getElementById(groupId);
+    if(grp){const t=grp.querySelector('.nav-tab');if(t)t.classList.add('active');}
+  }
+  closeSubmenus();
+  // Trigger data load
+  if(id==='stock')sApply();
+  if(id==='tickets'){tBuildRespFilter();tApply();}
+  if(id==='historial')reloadHistorial();
+  if(id==='returns')reloadReturns();
+  if(id==='guias')reloadGuias();
+  if(id==='dashboard')renderDashboard();
+}
+
+
+// ════════ BÚSQUEDA GLOBAL ════════
+function toggleGlobalSearch() {
+  const modal = document.getElementById('gsearch-modal');
+  if(modal.style.display==='flex') { closeGlobalSearch(); return; }
+  modal.style.display='flex';
+  document.getElementById('gsearch-results').innerHTML='<div class="gs-hint">Buscá por serial, RITM, modelo, número de guía o tracking.<br>Mínimo 2 caracteres.</div>';
+  setTimeout(()=>document.getElementById('gsearch-input').focus(), 50);
+}
+function closeGlobalSearch() {
+  document.getElementById('gsearch-modal').style.display='none';
+  document.getElementById('gsearch-input').value='';
+  document.getElementById('gsearch-results').innerHTML='';
+}
+
+function highlight(text, q) {
+  if(!q||!text) return esc(text||'');
+  const re = new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+  return esc(text).replace(re,'<mark style="background:#fef08a;color:#1a1a1a;border-radius:2px">$1</mark>');
+}
+
+function runGlobalSearch() {
+  const q = document.getElementById('gsearch-input').value.trim().toLowerCase();
+  const results = document.getElementById('gsearch-results');
+  
+  if(q.length < 2) {
+    results.innerHTML = '<div class="gs-hint">Buscá por serial, RITM, modelo, número de guía o tracking.<br>Mínimo 2 caracteres.</div>';
+    return;
+  }
+
+  const sections = [];
+
+  // ── STOCK ──
+  const stockRes = stock.filter(s => 
+    (s.serial||'').toLowerCase().includes(q) ||
+    (s.modelo||'').toLowerCase().includes(q) ||
+    (s.notas||'').toLowerCase().includes(q)
+  ).slice(0,5);
+  if(stockRes.length) sections.push({
+    label:'Stock', icon:'💻', color:'#e1f5ee',
+    items: stockRes.map(s=>({
+      title:`${s.modelo} · ${(s.serial||'').toUpperCase()}`,
+      sub:`${s.categoria} · ${s.estado}${s.asignado_ritm?' · En ticket '+s.asignado_ritm:''}`,
+      badge:s.estado, badgeClass: EST_CLS[s.estado]||'e-op',
+      action:()=>{ document.getElementById('s-search').value=s.serial; showPageById('stock'); sApply(); closeGlobalSearch(); }
+    }))
+  });
+
+  // ── TICKETS ──
+  const ticketRes = tickets.filter(t =>
+    (t.ritm||'').toLowerCase().includes(q) ||
+    (t.envio_serial||'').toLowerCase().includes(q) ||
+    (t.dev_serial||'').toLowerCase().includes(q) ||
+    (t.envio_tracking||'').toLowerCase().includes(q) ||
+    (t.dev_tracking||'').toLowerCase().includes(q) ||
+    (t.envio_responsable||'').toLowerCase().includes(q) ||
+    (t.envio_direccion||'').toLowerCase().includes(q)
+  ).slice(0,5);
+  if(ticketRes.length) sections.push({
+    label:'Tickets', icon:'🎫', color:'#eeedfe',
+    items: ticketRes.map(t=>({
+      title:`${t.ritm} · ${t.tipo}`,
+      sub:`${t.estado} · ${t.envio_responsable||''} · ${t.envio_serial||t.dev_serial||''}`,
+      badge:t.estado, badgeClass: t.estado==='En progreso'?'s-prog':'s-done',
+      action:()=>{ closeGlobalSearch(); openTDetail(t.id); }
+    }))
+  });
+
+  // ── RETURNS ──
+  const returnRes = returnsData.filter(r =>
+    (r.serial||'').toLowerCase().includes(q) ||
+    (r.modelo||'').toLowerCase().includes(q) ||
+    (r.ritm||'').toLowerCase().includes(q) ||
+    (r.comentarios||'').toLowerCase().includes(q)
+  ).slice(0,3);
+  if(returnRes.length) sections.push({
+    label:'Returns', icon:'📦', color:'#e6f1fb',
+    items: returnRes.map(r=>({
+      title:`${(r.serial||'').toUpperCase()} · ${r.modelo||''}`,
+      sub:`${r.ritm} · ${r.comentarios||''} · ${r.fecha_llegada||''}`,
+      badge:r.ritm, badgeClass:'b-nb',
+      action:()=>{ document.getElementById('r-search').value=r.serial||r.ritm; showPageById('returns'); rApply(); closeGlobalSearch(); }
+    }))
+  });
+
+  // ── GUÍAS ──
+  const guiaRes = guiasData.filter(g =>
+    (g.ritm||'').toLowerCase().includes(q) ||
+    (g.guia_envio||'').toLowerCase().includes(q) ||
+    (g.guia_regreso||'').toLowerCase().includes(q)
+  ).slice(0,3);
+  if(guiaRes.length) sections.push({
+    label:'Guías courier', icon:'🚚', color:'#faeeda',
+    items: guiaRes.map(g=>({
+      title:`${g.ritm} · ${g.tipo}`,
+      sub:`Envío: ${g.guia_envio||'—'} · Regreso: ${g.guia_regreso||'—'}`,
+      badge:fmtFecha(g.fecha), badgeClass:'b-cnb',
+      action:()=>{ document.getElementById('g-search').value=g.ritm||g.guia_envio; showPageById('guias'); gApply(); closeGlobalSearch(); }
+    }))
+  });
+
+  if(!sections.length) {
+    results.innerHTML = `<div class="gs-empty">Sin resultados para "<strong>${esc(q)}</strong>"</div>`;
+    return;
+  }
+
+  // Store actions globally for onclick access
+  window._gsActions = [];
+  results.innerHTML = sections.map(sec => `
+    <div class="gs-section">${sec.label}</div>
+    ${sec.items.map(item=>{
+      const idx = window._gsActions.length;
+      window._gsActions.push(item.action);
+      return `<div class="gs-item" onclick="window._gsActions[${idx}]&&window._gsActions[${idx}]()">
+        <div class="gs-item-icon" style="background:${sec.color}">${sec.icon}</div>
+        <div class="gs-item-body">
+          <div class="gs-item-title">${highlight(item.title, q)}</div>
+          <div class="gs-item-sub">${highlight(item.sub, q)}</div>
+        </div>
+        <span class="gs-item-badge badge ${item.badgeClass}">${esc(item.badge)}</span>
+      </div>`;
+    }).join('')}
+  `).join('');
+}
+
+// Close search on backdrop click
+document.addEventListener('click', e => {
+  const modal = document.getElementById('gsearch-modal');
+  if(modal && e.target === modal) closeGlobalSearch();
+});
+
+// Keyboard shortcut: Ctrl+K or Cmd+K
+document.addEventListener('keydown', e => {
+  if((e.ctrlKey||e.metaKey) && e.key==='k') { e.preventDefault(); toggleGlobalSearch(); }
+  if(e.key==='Escape') closeGlobalSearch();
+});
+
+
+// ════════ VISTA 360° ════════
+function openV360(serial) {
+  if(!serial||serial.length<3) return;
+  const s = serial.trim().toUpperCase();
+  document.getElementById('v360-serial').textContent = s;
+  document.getElementById('v360-modal').style.display = 'flex';
+  
+  // Find stock item
+  const stockItem = stock.find(x=>(x.serial||'').toUpperCase().trim()===s);
+  document.getElementById('v360-modelo').textContent = stockItem
+    ? `${stockItem.modelo} · ${stockItem.categoria} · ${stockItem.estado}`
+    : 'No encontrado en stock actual';
+
+  // Find related tickets
+  const relTickets = tickets.filter(t=>
+    (t.envio_serial||'').toUpperCase().trim()===s ||
+    (t.dev_serial||'').toUpperCase().trim()===s
+  ).sort((a,b)=>(b.envio_fecha||'').localeCompare(a.envio_fecha||''));
+
+  // Find related returns
+  const relReturns = returnsData.filter(r=>(r.serial||'').toUpperCase().trim()===s)
+    .sort((a,b)=>(b.fecha_llegada||'').localeCompare(a.fecha_llegada||''));
+
+  // Find related guias
+  const relGuias = guiasData.filter(g=>
+    relTickets.some(t=>t.ritm===g.ritm)
+  ).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+
+  // Build timeline
+  const events = [];
+  relTickets.forEach(t=>{
+    const isEnvio = (t.envio_serial||'').toUpperCase().trim()===s;
+    events.push({
+      date: isEnvio ? t.envio_fecha : t.dev_fecha,
+      title: `${t.tipo} — ${isEnvio?'Enviado':'Devuelto'}`,
+      sub: `${t.ritm} · ${t.envio_responsable||t.dev_responsable||''}  · ${t.estado}`,
+      color: t.estado==='En progreso'?'#1d9e75':'#378add',
+      action: ()=>{ closeV360(); openTDetail(t.id); }
+    });
+  });
+  relReturns.forEach(r=>{
+    events.push({
+      date: r.fecha_llegada,
+      title: `Return — ${r.comentarios||'ingreso'}`,
+      sub: `${r.ritm} · ${r.modelo||''}`,
+      color: '#7f77dd',
+      action: null
+    });
+  });
+  events.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+
+  // Build HTML
+  let html = '';
+
+  // KPIs
+  html += `<div class="v360-kpi-row">
+    <div class="v360-kpi"><div class="k">Tickets</div><div class="v">${relTickets.length}</div></div>
+    <div class="v360-kpi"><div class="k">Returns</div><div class="v">${relReturns.length}</div></div>
+    <div class="v360-kpi"><div class="k">Guías</div><div class="v">${relGuias.length}</div></div>
+    <div class="v360-kpi"><div class="k">Estado actual</div><div class="v" style="font-size:13px">${stockItem?stockItem.estado:'—'}</div></div>
+  </div>`;
+
+  // Stock info
+  if(stockItem) {
+    html += `<div class="v360-section">
+      <div class="v360-section-title">Stock</div>
+      <div style="background:var(--bg);border-radius:8px;padding:10px 12px;font-size:13px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div><span style="color:var(--text3);font-size:11px">Categoría</span><br>${esc(stockItem.categoria)}</div>
+          <div><span style="color:var(--text3);font-size:11px">Estado</span><br><span class="badge ${EST_CLS[stockItem.estado]||'e-op'}">${esc(stockItem.estado)}</span></div>
+          <div><span style="color:var(--text3);font-size:11px">Modelo</span><br>${esc(stockItem.modelo)}</div>
+          <div><span style="color:var(--text3);font-size:11px">Garantía</span><br>${esc(stockItem.venc_garantia||'—')}</div>
+          ${stockItem.asignado_ritm?`<div style="grid-column:1/-1"><span style="color:var(--text3);font-size:11px">Asignado a</span><br><span class="badge e-asignado">${esc(stockItem.asignado_ritm)}</span></div>`:''}
+          ${stockItem.notas?`<div style="grid-column:1/-1"><span style="color:var(--text3);font-size:11px">Notas</span><br>${esc(stockItem.notas)}</div>`:''}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // Timeline
+  if(events.length) {
+    html += `<div class="v360-section">
+      <div class="v360-section-title">Timeline</div>
+      <div class="v360-timeline">
+        ${events.map(e=>`
+          <div class="v360-event" ${e.action?`onclick="(${e.action.toString()})()" style="cursor:pointer"`:''}>
+            <div class="v360-event-dot" style="background:${e.color}"></div>
+            <div class="v360-event-body">
+              <div class="v360-event-title">${esc(e.title)}</div>
+              <div class="v360-event-sub">${esc(e.sub)}</div>
+            </div>
+            <div class="v360-event-date">${esc(fmtFecha(e.date)||'—')}</div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  } else {
+    html += `<div class="v360-no-data">Sin historial de movimientos para este serial.</div>`;
+  }
+
+  // Related guias
+  if(relGuias.length) {
+    html += `<div class="v360-section">
+      <div class="v360-section-title">Guías courier</div>
+      ${relGuias.map(g=>`<div style="font-size:12px;padding:7px 10px;background:var(--bg);border-radius:7px;margin-bottom:5px">
+        <div style="font-weight:500">${esc(g.ritm)} · ${esc(g.tipo)} · ${esc(fmtFecha(g.fecha))}</div>
+        ${g.guia_envio?`<div style="color:var(--text2)">Envío: <span style="font-family:monospace">${esc(g.guia_envio)}</span></div>`:''}
+        ${g.guia_regreso?`<div style="color:var(--text2)">Regreso: <span style="font-family:monospace">${esc(g.guia_regreso)}</span></div>`:''}
+      </div>`).join('')}
+    </div>`;
+  }
+
+  document.getElementById('v360-body').innerHTML = html;
+
+  // Wire timeline actions after render
+  const timelineItems = document.querySelectorAll('.v360-timeline .v360-event[onclick]');
+  events.filter(e=>e.action).forEach((e,i)=>{
+    if(timelineItems[i]) timelineItems[i].onclick = e.action;
+  });
+}
+
+function closeV360() {
+  document.getElementById('v360-modal').style.display='none';
+}
+
+// Close on backdrop
+document.getElementById('v360-modal').addEventListener('click', e=>{
+  if(e.target===e.currentTarget) closeV360();
+});
+
+
+// ════════ VALIDACIÓN DUPLICADOS ════════
+function checkStockDuplicate() {
+  const val = document.getElementById('sm-ser').value.trim().toUpperCase();
+  const hint = document.getElementById('sm-ser-hint');
+  if(val.length < 4) { hint.innerHTML=''; return; }
+  
+  // Check if editing existing item
+  const existing = stock.find(s => (s.serial||'').toUpperCase().trim() === val);
+  
+  if(existing && existing.id !== sEditId) {
+    hint.innerHTML = `<div class="hint h-miss" style="cursor:pointer" onclick="openV360('${val}')">
+      ⚠️ Serial ya existe: ${esc(existing.modelo)} · <span class="badge ${EST_CLS[existing.estado]||'e-op'}">${esc(existing.estado)}</span>
+      <span style="color:var(--blue-b);margin-left:4px">Ver historial →</span>
+    </div>`;
+  } else if(existing && existing.id === sEditId) {
+    hint.innerHTML = '<div class="hint h-ok">✓ Serial válido</div>';
+  } else {
+    hint.innerHTML = '<div class="hint h-ok">✓ Serial disponible</div>';
+  }
+}
+
+// Block save if duplicate (different item)
+const _origSaveSItem = saveSItem;
+
+// ── INIT ──
+initTheme();
+initAuth();
+</script>
+</body>
+</html>
